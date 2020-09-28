@@ -19,11 +19,11 @@ cd $target_path
 $filesandfolders = Get-ChildItem -recurse | Where-Object {$_.name -match $regex_str1} 
 $filesandfolders | Where-Object {!$_.PsIscontainer}  |  foreach {
     $New=$_.name -Replace $regex_str1,"."
-    Rename-Item -path $_.Fullname -newname $New -passthru
+    Rename-Item -Literalpath $_.Fullname -newname $New -passthru
 }
 $filesandfolders | Where-Object {$_.PsIscontainer}  |  foreach {
     $New=$_.name -Replace $regex_str1,"."
-    Rename-Item -path $_.Fullname -newname $New -passthru
+    Rename-Item -Literalpath $_.Fullname -newname $New -passthru
 }
 
 $Folder = dir -Recurse -Directory -filter $filter_mask ;

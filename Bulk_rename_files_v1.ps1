@@ -1,8 +1,8 @@
 cd D:\Downloads\ ;
-$target_path = (Get-Location).path + '\' + 'Porn';
-$ext = '.mp4';
+$target_path = (Get-Location).path + '\' + 'Folder001';
+$ext = '.mp3';
 $ext_mask = '*' + $ext;
-$filter_mask = '*xxx*';
+$filter_mask = '*xyz*';
 $array_ext = @('*.txt','*.nfo','*.exe');
 $regex_str1 = '[^0-9A-Za-z\.\[\]]';
 $regex_str2 = '\.+';

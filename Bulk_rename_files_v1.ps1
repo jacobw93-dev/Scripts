@@ -1,10 +1,10 @@
 cd D:\Downloads\ ;
-$input_folder = Read-Host -Prompt "Podaj nazwê katalogu, do którego przenieœæ przetworzone pliki `n";
+$input_folder = Read-Host -Prompt "Podaj nazwÄ™ katalogu, do ktÃ³rego przenieÅ›Ä‡ przetworzone pliki `n";
 $input_folder = (Get-Location).path + '\' + $input_folder;
-$input_ext = Read-Host -Prompt "Podaj nazwê rozszerzenia dla plików do przetworzenia `n";
+$input_ext = Read-Host -Prompt "Podaj nazwÄ™ rozszerzenia dla plikÃ³w do przetworzenia `n";
 $input_ext = '.' + $input_ext;
 $file_filter = '*' + $ext;
-$dir_filter = Read-Host -Prompt "Podaj maskê dla katalogów do przetworzenia `n";
+$dir_filter = Read-Host -Prompt "Podaj maskÄ™ dla katalogÃ³w do przetworzenia `n";
 $dir_filter = '*' + $dir_filter + '*';
 $array_ext = @('*.txt','*.nfo','*.exe','*.diz');
 $regex_str1 = '[^0-9A-Za-z\.\[\]]';

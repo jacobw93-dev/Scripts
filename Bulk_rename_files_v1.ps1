@@ -1,3 +1,4 @@
+$Host.UI.RawUI.WindowTitle = "Bulk_rename_files"
 cd D:\Downloads\ ;
 $input_folder = Read-Host -Prompt "Podaj nazwę katalogu, do którego przenieść przetworzone pliki `n";
 $input_folder = (Get-Location).path + '\' + $input_folder;
@@ -20,12 +21,10 @@ dir -Directory -filter $dir_filter | move-item -Destination $input_folder;
 cd $input_folder    
 
 $filesandfolders = Get-ChildItem -recurse | Where-Object {$_.name -match $regex_str1} 
-$filesandfolders | Where-Object {!$_.PsIscontainer}  |  foreach {
-    $New=$_.name -Replace $regex_str1,"."
-    Rename-Item -Literalpath $_.Fullname -newname $New -passthru
-}
 $filesandfolders | Where-Object {$_.PsIscontainer}  |  foreach {
     $New=$_.name -Replace $regex_str1,"."
+    Rename-Item -Literalpath $_.Fullname -newname $New -passthru
+	$New=$_.name -Replace $regex_str2,"."
     Rename-Item -Literalpath $_.Fullname -newname $New -passthru
 }
 
@@ -61,8 +60,7 @@ Foreach ($dir In $Folder)
         } 
     }
 
-dir -Recurse -Directory -filter $dir_filter | dir -Recurse -File -filter $file_filter | Move-Item -Destination .\ ;
-dir -Recurse -file -filter $dir_filter | Rename-item -NewName {$_.Name -replace "$regex_str2","."} ;
+dir -Recurse -Directory -filter $dir_filter | dir -Recurse -File -filter $file_filter | Move-Item -Destination $input_folder ;
 for($i=0;$i -le 2;$i++){dir -Recurse -Directory -filter $dir_filter | dir -Recurse -File -Filter $($array_ext[$i]) | Remove-Item};
 ls -Directory -filter $dir_filter| where { -NOT $_.GetFiles()} | Remove-Item;
 

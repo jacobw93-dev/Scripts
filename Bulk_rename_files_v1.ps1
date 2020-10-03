@@ -1,14 +1,14 @@
 $Host.UI.RawUI.WindowTitle = "Bulk_rename_files"
 cd D:\Downloads\ ;
-$input_folder = Read-Host -Prompt "Podaj nazwê katalogu, do którego przenieœæ przetworzone pliki `n";
+$input_folder = Read-Host -Prompt "Podaj nazwÄ™ katalogu, do ktÃ³rego przenieÅ›Ä‡ przetworzone pliki `n";
 $input_folder = (Get-Location).path + '\' + $input_folder;
-$input_ext = Read-Host -Prompt "Podaj nazwê rozszerzenia dla plików do przetworzenia `n";
+$input_ext = Read-Host -Prompt "Podaj nazwÄ™ rozszerzenia dla plikÃ³w do przetworzenia `n";
 $ext = '.' + $input_ext;
 $file_filter = '*' + $ext;
-$dir_filter = Read-Host -Prompt "Podaj maskê dla katalogów do przetworzenia `n";
+$dir_filter = Read-Host -Prompt "Podaj maskÄ™ dla katalogÃ³w do przetworzenia `n";
 $dir_filter = '*' + $dir_filter + '*';
 $array_ext = @('*.txt','*.nfo','*.exe','*.diz');
-$regex_str1 = '[^0-9A-Za-z\.\[\]]';
+$regex_str1 = '[^0-9A-Za-z\.]';
 $regex_str2 = '\.+';
 
 if(!(Test-Path $input_folder)) {
@@ -20,12 +20,14 @@ if(!(Test-Path $input_folder)) {
 dir -Directory -filter $dir_filter | move-item -Destination $input_folder;
 cd $input_folder    
 
-$filesandfolders = Get-ChildItem -recurse | Where-Object {$_.name -match $regex_str1} 
+$filesandfolders = Get-ChildItem -recurse | Where-Object { $_.name -match $regex_str1} 
 $filesandfolders | Where-Object {$_.PsIscontainer}  |  foreach {
-    $New=$_.name -Replace $regex_str1,"."
-    Rename-Item -Literalpath $_.Fullname -newname $New -passthru
-	$New=$_.name -Replace $regex_str2,"."
-    Rename-Item -Literalpath $_.Fullname -newname $New -passthru
+    $New=($_.name -Replace $regex_str1,".") -Replace $regex_str2,".";
+    Rename-Item  -Literalpath $_.Fullname -newname $New -passthru
+}
+$filesandfolders | Where-Object {!$_.PsIscontainer}  |  foreach {
+    $New=($_.name -Replace $regex_str1,".") -Replace $regex_str2,".";
+    Rename-Item  -Literalpath $_.Fullname -newname $New -passthru
 }
 
 $Folder = dir -Recurse -Directory -filter $dir_filter ;
@@ -54,7 +56,7 @@ Foreach ($dir In $Folder)
 			# Trim spaces and rename the file 
             $image_string = $file.fullname.ToString().Trim() 
             #"$split[0] renamed to $replace" 
-            Rename-Item -LiteralPath "$image_string" "$replace";
+            Rename-Item  -LiteralPath "$image_string" "$replace";
             $i++ 
             } 
         }

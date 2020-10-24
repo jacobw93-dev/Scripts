@@ -1,4 +1,4 @@
-$Host.UI.RawUI.WindowTitle = "Bulk_rename_files"
+$Host.UI.RawUI.WindowTitle = "Bulk_rename_files_v2"
 $Input= Read-Host "Podaj nazwe sciezki (domyslnie: G:\Mój dysk\.Private\Pics)"
 If ($Input -eq '') {$Input = 'G:\Mój dysk\.Private\Pics'}
 
@@ -10,17 +10,21 @@ $regex_str1 = '[^0-9A-Za-z\.]';
 $regex_str2 = '\.+';
 $Date = Get-Date -format "yyyyMMdd_HHmm"
 
-$Folder = gci .\*\* -Recurse -Directory | sort Name
+gci .\*\* -Directory | Where-Object { $_.name -Match $_.Parent.Name } | Rename-Item -NewName { "temp_" + $_.Name }
+pause
+$Folder = gci .\*\* -Directory | Where-Object { $_.name -Match $_.Parent.Name } | sort Name
+$counter = 1
 Foreach ($dir In $Folder) 
     {
-	$counter = 1
+
 	$zero = If ( $counter -le 9) { "00" } ElseIf ( $counter -le 99){ "0" } Else { "" }
 	$old_dir = (get-item -LiteralPath $dir).FullName
 	$new_dir = (get-item -LiteralPath $dir).Parent.Name + ' - ' + $zero + $counter
 	if (((get-item -LiteralPath $dir).Name) -match ((get-item -LiteralPath $dir).Parent.Name))
 		{
-		Rename-Item -LiteralPath "$old_dir" "$new_dir";
-		}	
+		Rename-Item -LiteralPath "$old_dir" "$new_dir";		 
+		}
+	$counter++
 	}
 
 

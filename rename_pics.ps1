@@ -8,6 +8,7 @@ pause;
 $fileTypes = @('.jpg','.png')
 $regex_str1 = '[^0-9A-Za-z\.]';
 $regex_str2 = '\.+';
+$Date = Get-Date -format "yyyyMMdd_HHmm"
 
 
 $Folder = dir -LiteralPath . -Recurse -Directory | sort Name ;
@@ -21,10 +22,9 @@ Foreach ($dir In $Folder)
     $newdir = $dir.name + "." 
     # Search for the files set in the filter
     $files = Get-ChildItem -LiteralPath $dir.fullname -File | where-object {$_.extension -in $fileTypes} | sort Name
-    echo $files
-    pause
     Foreach ($file In $files) 
-        { 
+        {
+        $Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 		$extension = $file.Extension
         # Check if a file exists 
         If ($file) 
@@ -38,6 +38,9 @@ Foreach ($dir In $Folder)
             #"$split[0] renamed to $replace"
 			$replace = ($replace -Replace $regex_str1,".") -Replace $regex_str2,".";
             Rename-Item  -LiteralPath "$image_string" "$replace";
+
+            Write-Output $("$Current_timestamp - Renamed {0} to {1} " -f $image_string,$replace) | Out-File -FilePath ("$Input" + '\' + "changelog_" + $Date + ".txt") -Append;
+            
             $counter++ 
             } 
         }

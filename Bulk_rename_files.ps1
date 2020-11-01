@@ -3,7 +3,7 @@ cd D:\Downloads\ ;
 $input_folder = Read-Host -Prompt "Podaj nazwę katalogu, do którego przenieść przetworzone pliki `n";
 $input_folder = (Get-Location).path + '\' + $input_folder;
 echo $input_folder;
-$input_ext = Read-Host -Prompt "Podaj nazwę rozszerzenia dla plików do przetworzenia `n";
+$input_ext = Read-Host -Prompt "Podaj nazwę rozszerzenia dla plików do przetworzenia, np. 'mp4'`n";
 $ext = '.' + $input_ext;
 $file_filter = '*' + $ext;
 $dir_filter = Read-Host -Prompt "Podaj maskę dla katalogów do przetworzenia `n";
@@ -66,7 +66,7 @@ Foreach ($dir In $Folder)
 	
     }
 
-for($i=0;$i -le 2;$i++){dir -Recurse -Directory -filter $dir_filter | dir -Recurse -File | where-object {$_.extension -notin $ext} | Remove-Item};
+dir -Recurse -Directory -filter $dir_filter | dir -Recurse -File | where-object {$_.extension -notin $ext} | Remove-Item;
 ls -Directory -filter $dir_filter| where { -NOT $_.GetFiles()} | Remove-Item;
 
 start . ;

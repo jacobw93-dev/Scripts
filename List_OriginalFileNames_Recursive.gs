@@ -11,6 +11,7 @@ function onOpen() {
 function start() {
     var sheet = SpreadsheetApp.getActiveSheet();
     sheet.clear();
+    sheet.getRange('A1').activate();
     sheet.appendRow(["Name", "FileID", "Date", "Size (MB)", "URL", "Description", "Type", "Original Name"]);
 
     var folderName = Browser.inputBox("Enter Folder Name:");
@@ -49,6 +50,7 @@ function start() {
     function addFilesToSheet(files, folder) {
         var data;
         var folderName = folder.getName();
+        var spreadsheet = SpreadsheetApp.getActive();
         while (files.hasNext()) {
           
           var file = files.next();
@@ -68,6 +70,7 @@ function start() {
             ]);
           
           file.setName(Revision_Name(passFileId));
+            spreadsheet.getRange('A' + (spreadsheet.getLastRow()+1)).activate();
           }
           Utilities.sleep(100);
         }

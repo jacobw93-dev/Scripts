@@ -13,8 +13,9 @@ function start() {
     sheet.clear();
     sheet.appendRow(["Name", "FileID", "Date", "Size (MB)", "URL", "Description", "Type", "Original Name"]);
 
-    var folderId = Browser.inputBox("Enter Folder ID:");
-    var folder = DriveApp.getFolderById(folderId).getFolders();
+    var folderName = Browser.inputBox("Enter Folder Name:");
+    var folder = DriveApp.getFoldersByName(folderName);
+    //var folder = DriveApp.getFolderById(folderId).getFolders();
 
     if (folder.hasNext()) {
         processFolder(folder);
@@ -49,20 +50,26 @@ function start() {
         var data;
         var folderName = folder.getName();
         while (files.hasNext()) {
-            var file = files.next();
+          
+          var file = files.next();
           var passFileId = file.getId();
-            Logger.log(file.getName());
+          if (file.getName() != Revision_Name(passFileId)) {
 
+            Logger.log(file.getName());
             sheet.appendRow([
               file.getName(),
               passFileId,
               file.getDateCreated(),
-              parseFloat(file.getSize()/1024/1024).toFixed(2),
+              parseFloat(file.getSize()/1024/1024).toFixed(3),
               file.getUrl(),
               file.getDescription(),
               file.getMimeType(),
               Revision_Name(passFileId)
             ]);
+          
+          file.setName(Revision_Name(passFileId));
+          }
+          Utilities.sleep(100);
         }
     }
 

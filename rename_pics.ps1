@@ -10,11 +10,11 @@ $regex_str1 = '[^0-9A-Za-z\.]';
 $regex_str2 = '\.+';
 $Date = Get-Date -format "yyyyMMdd_HHmm"
 
-gci .\*\*\*\* -File | Move-Item -Destination { $_.Directory.Parent.FullName }
-ls -Directory -recurse | Where { ( -not $_.GetDirectories()) -and ( -not $_.GetFiles()) } | sort Name | Remove-Item;
+#gci .\*\*\*\* -File | Move-Item -Destination { $_.Directory.Parent.FullName }
+#ls -Directory -recurse | Where { ( -not $_.GetDirectories()) -and ( -not $_.GetFiles()) } | sort Name | Remove-Item;
 #gci .\*\* -Directory  | Rename-Item -NewName { "temp_" + $_.Parent.Name + $_.Name }
-#gci .\*\* -Directory | Where-Object { $_.name -Match $_.Parent.Name } | Rename-Item -NewName { "temp_"  + $_.Parent.Name + $_.Name }
-gci .\*\* -Directory | Rename-Item -NewName { "temp_"  + $_.Parent.Name + $_.Name }
+gci .\*\* -Directory | Where-Object { $_.name -Match $_.Parent.Name } | sort Name | Rename-Item -NewName { "temp_"  + $_.Name }
+#gci .\*\* -Directory | Rename-Item -NewName { "temp_"  + $_.Parent.Name + $_.Name }
 #$Folder = gci .\*\* -Directory | sort Name
 $Folder = gci .\*\* -Directory | Where-Object { $_.name -Match $_.Parent.Name } | sort Name
 $counter = 1

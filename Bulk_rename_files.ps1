@@ -2,14 +2,15 @@ $Host.UI.RawUI.WindowTitle = "Bulk_rename_files"
 cd D:\Downloads\ ;
 $input_folder = Read-Host -Prompt "Podaj nazwę katalogu, do którego przenieść przetworzone pliki `n";
 $input_folder = (Get-Location).path + '\' + $input_folder;
+echo $input_folder;
 $input_ext = Read-Host -Prompt "Podaj nazwę rozszerzenia dla plików do przetworzenia `n";
 $ext = '.' + $input_ext;
 $file_filter = '*' + $ext;
 $dir_filter = Read-Host -Prompt "Podaj maskę dla katalogów do przetworzenia `n";
 $dir_filter = '*' + $dir_filter + '*';
-$array_ext = @('*.txt','*.nfo','*.exe','*.diz');
 $regex_str1 = '[^0-9A-Za-z\.]';
 $regex_str2 = '\.+';
+$regex_str3 = '(\d{3,4}p).*'
 
 if(!(Test-Path $input_folder)) {
     
@@ -22,7 +23,7 @@ cd $input_folder
 
 $filesandfolders = Get-ChildItem -recurse | Where-Object { $_.name -match $regex_str1} 
 $filesandfolders | Where-Object {$_.PsIscontainer}  |  foreach {
-    $New=($_.name -Replace $regex_str1,".") -Replace $regex_str2,".";
+    $New=(($_.name -Replace $regex_str1,".") -Replace $regex_str2,".") -Replace $regex_str3,'$1';
     Rename-Item  -Literalpath $_.Fullname -newname $New -passthru
 }
 $filesandfolders | Where-Object {!$_.PsIscontainer}  |  foreach {
@@ -65,7 +66,7 @@ Foreach ($dir In $Folder)
 	
     }
 
-for($i=0;$i -le 2;$i++){dir -Recurse -Directory -filter $dir_filter | dir -Recurse -File -Filter $($array_ext[$i]) | Remove-Item};
+for($i=0;$i -le 2;$i++){dir -Recurse -Directory -filter $dir_filter | dir -Recurse -File | where-object {$_.extension -notin $ext} | Remove-Item};
 ls -Directory -filter $dir_filter| where { -NOT $_.GetFiles()} | Remove-Item;
 
 start . ;

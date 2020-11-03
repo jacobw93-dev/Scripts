@@ -1,4 +1,4 @@
-$Host.UI.RawUI.WindowTitle = "Bulk_rename_files_v2"
+$Host.UI.RawUI.WindowTitle = "Bulk_rename_files_v3"
 $Input= Read-Host "Podaj nazwe sciezki (domyslnie: G:\Mój dysk\.Private\Pics)"
 If ($Input -eq '') {$Input = 'G:\Mój dysk\.Private\Pics'}
 
@@ -16,21 +16,29 @@ $Date = Get-Date -format "yyyyMMdd_HHmm"
 gci .\*\* -Directory | Where-Object { $_.name -Match $_.Parent.Name } | sort Name | Rename-Item -NewName { "temp_"  + $_.Name }
 #gci .\*\* -Directory | Rename-Item -NewName { "temp_"  + $_.Parent.Name + $_.Name }
 #$Folder = gci .\*\* -Directory | sort Name
-$Folder = gci .\*\* -Directory | Where-Object { $_.name -Match $_.Parent.Name } | sort Name
-$counter = 1
-Foreach ($dir In $Folder) 
-    {
 
-	$zero = If ( $counter -le 9) { "00" } ElseIf ( $counter -le 99){ "0" } Else { "" }
-	$old_dir = (get-item -LiteralPath $dir).FullName
-	$new_dir = (get-item -LiteralPath $dir).Parent.Name + ' - ' + $zero + $counter
-	if (((get-item -LiteralPath $dir).Name) -match ((get-item -LiteralPath $dir).Parent.Name))
-		{
-		Rename-Item -LiteralPath "$old_dir" "$new_dir";		 
-		}
-	$counter++
-	}
 
+function RenameFolderAndSubFolders {
+  param($item, $number)
+  $subfolders = Get-ChildItem $item.FullName -Directory
+
+  foreach ($folder in $subfolders) {
+    RenameFolderAndSubFolders $folder 1
+  }
+
+  while ($true){
+        try {
+            Write-Output "Renaming: $($item.FullName)"
+			$NewName = $item.Parent.Name + ' - ' + $number
+            Rename-Item $item.FullName -NewName $NewName -ErrorAction Stop
+            return
+        }
+        catch {}
+        $number++
+    }
+}
+
+Get-ChildItem .\*\* -Directory | Where-Object { $_.name -Match $_.Parent.Name } | sort Name | % { RenameFolderAndSubFolders -item $_ -number 1 }
 
 $Folder = dir -LiteralPath . -Recurse -Directory | sort Name ;
           
@@ -60,7 +68,7 @@ Foreach ($dir In $Folder)
 			$replace = ($replace -Replace $regex_str1,".") -Replace $regex_str2,".";
             Rename-Item  -LiteralPath "$image_string" "$replace";
 
-            Write-Output $("$Current_timestamp - Renamed {0} to {1} " -f $image_string,$replace) | Out-File -FilePath ("$Input" + '\' + "changelog_" + $Date + ".txt") -Append;
+            Write-Output $("$Current_timestamp - Renamed '{0}' to '{1}' " -f $image_string,$replace) | Out-File -FilePath ("$Input" + '\' + "changelog_" + $Date + ".txt") -Append;
             
             $counter++ 
             } 

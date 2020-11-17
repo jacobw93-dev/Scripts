@@ -1,6 +1,6 @@
 $Host.UI.RawUI.WindowTitle = "Bulk_rename_files_v3"
-$Input= Read-Host "Podaj nazwe sciezki (domyslnie: G:\Mój dysk\.Private\Pics)"
-If ($Input -eq '') {$Input = 'G:\Mój dysk\.Private\Pics'}
+$Input= Read-Host "Podaj nazwe sciezki (domyslnie: G:\MÃ³j dysk\.Private\Pics)"
+If ($Input -eq '') {$Input = 'G:\MÃ³j dysk\.Private\Pics'}
 
 cd -LiteralPath "$Input" ;
 echo $Input;
@@ -13,7 +13,7 @@ $Date = Get-Date -format "yyyyMMdd_HHmm"
 #gci .\*\*\*\* -File | Move-Item -Destination { $_.Directory.Parent.FullName }
 #ls -Directory -recurse | Where { ( -not $_.GetDirectories()) -and ( -not $_.GetFiles()) } | sort Name | Remove-Item;
 #gci .\*\* -Directory  | Rename-Item -NewName { "temp_" + $_.Parent.Name + $_.Name }
-gci .\*\* -Directory | Where-Object { $_.name -Match $_.Parent.Name } | sort Name | Rename-Item -NewName { "temp_"  + $_.Name }
+#gci .\*\* -Directory | Where-Object { $_.name -Match $_.Parent.Name } | sort Name | Rename-Item -NewName { "temp_"  + $_.Name }
 #gci .\*\* -Directory | Rename-Item -NewName { "temp_"  + $_.Parent.Name + $_.Name }
 #$Folder = gci .\*\* -Directory | sort Name
 
@@ -38,9 +38,9 @@ function RenameFolderAndSubFolders {
     }
 }
 
-Get-ChildItem .\*\* -Directory | Where-Object { $_.name -Match $_.Parent.Name } | sort Name | % { RenameFolderAndSubFolders -item $_ -number 1 }
+Get-ChildItem .\*\* -Directory  | Where-Object { $_.name -Match $_.Parent.Name } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFolderAndSubFolders -item $_ -number 1 }
 
-$Folder = dir -LiteralPath . -Recurse -Directory | sort Name ;
+$Folder = dir -LiteralPath . -Recurse -Directory | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } ;
           
 Foreach ($dir In $Folder) 
     {
@@ -50,7 +50,7 @@ Foreach ($dir In $Folder)
     $counter = 1 
     $newdir = $dir.name + "." 
     # Search for the files set in the filter
-    $files = Get-ChildItem -LiteralPath $dir.fullname -File | where-object {$_.extension -in $fileTypes} | sort Name
+    $files = Get-ChildItem -LiteralPath $dir.fullname -File | where-object {$_.extension -in $fileTypes} | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) }
     Foreach ($file In $files) 
         {
         $Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"

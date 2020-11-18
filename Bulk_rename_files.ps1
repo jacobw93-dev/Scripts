@@ -67,7 +67,7 @@ Foreach ($dir In $Folder)
     }
 
 dir -Recurse -Directory -filter $dir_filter | dir -Recurse -File | where-object {$_.extension -notin $ext} | Remove-Item;
-ls -Directory -filter $dir_filter| where { -NOT $_.GetFiles()} | Remove-Item;
+ls -Directory -filter $dir_filter -recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories()} | Remove-Item;
 
 start . ;
 cd \ ;

@@ -18,7 +18,7 @@ if(!(Test-Path $input_folder)) {
 
 }
 
-dir -Directory -filter $dir_filter | ? { !(gci $_ -file -recurse -filter '*.!qb') } | Select-Object FullName | move-item -Destination $input_folder;
+dir -Directory -filter $dir_filter | ? { !(gci $_ -file -recurse -filter '*.!qb') } | move-item -Destination $input_folder;
 cd $input_folder    
 
 $filesandfolders = Get-ChildItem -recurse | Where-Object { $_.name -match $regex_str1} 

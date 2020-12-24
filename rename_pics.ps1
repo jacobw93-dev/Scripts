@@ -1,5 +1,5 @@
 $Host.UI.RawUI.WindowTitle = "Bulk_rename_files_v3"
-$Input= Read-Host "Podaj nazwe sciezki (domyslnie: G:\Mój dysk\.Private\Pics)"
+$Input = Read-Host "Podaj nazwe sciezki (domyslnie: G:\Mój dysk\.Private\Pics)"
 If ($Input -eq '') {$Input = 'G:\Mój dysk\.Private\Pics'}
 
 cd -LiteralPath "$Input" ;
@@ -20,7 +20,7 @@ $Date = Get-Date -format "yyyyMMdd_HHmm"
 
 function RenameFolderAndSubFolders {
   param($item, $number)
-  $subfolders = Get-ChildItem $item.FullName -Directory
+  $subfolders = Get-ChildItem -LiteralPath $item.FullName -Directory
 
   foreach ($folder in $subfolders) {
     RenameFolderAndSubFolders $folder 1
@@ -30,7 +30,7 @@ function RenameFolderAndSubFolders {
         try {
             Write-Output "Renaming: $($item.FullName)"
 			$NewName = $item.Parent.Name + ' - ' + $number
-            Rename-Item $item.FullName -NewName $NewName -ErrorAction Stop
+            Rename-Item -LiteralPath $item.FullName -NewName $NewName -ErrorAction Stop
             return
         }
         catch {}
@@ -38,8 +38,8 @@ function RenameFolderAndSubFolders {
     }
 }
 
-Get-ChildItem .\*\* -Directory  | Where-Object { $_.name -Match $_.Parent.Name } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFolderAndSubFolders -item $_ -number 1 }
-
+Get-ChildItem -LiteralPath $Input -Directory  | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFolderAndSubFolders -item $_ -number 1 }
+# Where-Object { $_.name -Match $_.Parent.Name }
 $Folder = dir -LiteralPath . -Recurse -Directory | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } ;
           
 Foreach ($dir In $Folder) 

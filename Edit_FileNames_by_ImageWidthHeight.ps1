@@ -1,11 +1,12 @@
 $folder = Read-Host "Podaj nazwe sciezki: "
+$fileTypes = @('.jpg','.png')
 
 $image = New-Object -ComObject Wia.ImageFile
 
-$counter = (Get-ChildItem $folder -directory -recurse | Get-ChildItem -filter *.jpg).Count
+$counter = (Get-ChildItem $folder -recurse  | where-object {$_.extension -in $fileTypes}).Count
 $i = 0
 
-$pictures = Get-ChildItem $folder -directory -recurse | Get-ChildItem -filter *.jpg | ForEach-Object {
+$pictures = Get-ChildItem $folder -recurse  | where-object {$_.extension -in $fileTypes} | ForEach-Object {
 	
     $image.LoadFile($_.fullname)
     $size = $image.Width.ToString() + 'x' + $image.Height.ToString()
@@ -24,7 +25,7 @@ $pictures = Get-ChildItem $folder -directory -recurse | Get-ChildItem -filter *.
 
     $heightGtWidth = if ([int]$image.Height.ToString() -gt [int]$image.Width.ToString()) {
         $true
-		rename-item -LiteralPath $_.FullName $_.Name.Replace(".jpg", "_portrait.jpg")
+		rename-item -LiteralPath $_.FullName $_.Name.Replace($_.extension, ("_portrait" + $_.extension))
     } else {
         $false
     }

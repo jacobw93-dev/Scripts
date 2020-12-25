@@ -1,4 +1,4 @@
-$Host.UI.RawUI.WindowTitle = "Bulk_rename_files_v3"
+$Host.UI.RawUI.WindowTitle = "Bulk_rename_files_v4"
 $Input = Read-Host "Podaj nazwe sciezki (domyslnie: G:\Mój dysk\.Private\Pics)"
 If ($Input -eq '') {$Input = 'G:\Mój dysk\.Private\Pics'}
 
@@ -29,7 +29,6 @@ function RenameFolderAndSubFolders {
   while ($true){
         try {            
 			$NewName = $item.Parent.Name + ' - ' + $number
-			Write-Output $("Renaming: $($item.FullName) to $NewName") | Out-File -FilePath ("$Input" + '\' + "changelog_" + $Date + ".txt") -Append;
             Rename-Item -LiteralPath $item.FullName -NewName $NewName -ErrorAction Stop
             return
         }
@@ -52,7 +51,7 @@ Foreach ($dir In $Folder)
     {
 	$k++
 	$percent_folder = [math]::Round($k / $folder_counter * 100)
-	Write-Progress -id 1 -activity "Parent Progress Bar" -Status "Processing $dir (Total $percent_folder %)" -PercentComplete $percent_folder
+	Write-Progress -Id 1 -activity "Folder Progress Bar" -CurrentOperation "Current directory: '$dir'" -Status "Processing $k of $folder_counter ($percent_folder%)"  -PercentComplete $percent_folder
 	$current_dir = (Get-Location).path + '\' + $dir;
    
     # Set default value for addition to file name 
@@ -67,10 +66,9 @@ Foreach ($dir In $Folder)
         # Check if a file exists 
         If ($file) 
             {
-			
 			$l++
 			$percent_file = [math]::Round($l / $file_counter * 100)
-			Write-Progress -parentId 1 -activity "Child Progress Bar" -Status "Processing $file (Total $percent_file %)" -PercentComplete $percent_file
+			Write-Progress -Id 2  -activity "Total Progress Bar" -CurrentOperation "Current file: '$file'" -Status "Processing $l of $file_counter ($percent_file%)"  -PercentComplete $percent_file
             # Split the name and rename it to the parent folder 
             $split    = $file.name.split($extension)
 			$zero = If ( $counter -le 9) { "00" } ElseIf ( $counter -le 99){ "0" } Else { "" }

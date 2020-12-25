@@ -27,9 +27,9 @@ function RenameFolderAndSubFolders {
   }
 
   while ($true){
-        try {
-            Write-Output "Renaming: $($item.FullName)"
+        try {            
 			$NewName = $item.Parent.Name + ' - ' + $number
+			Write-Output $("Renaming: $($item.FullName) to $NewName") | Out-File -FilePath ("$Input" + '\' + "changelog_" + $Date + ".txt") -Append;
             Rename-Item -LiteralPath $item.FullName -NewName $NewName -ErrorAction Stop
             return
         }
@@ -40,10 +40,19 @@ function RenameFolderAndSubFolders {
 
 Get-ChildItem -LiteralPath $Input -Directory  | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFolderAndSubFolders -item $_ -number 1 }
 # Where-Object { $_.name -Match $_.Parent.Name }
+cls
 $Folder = dir -LiteralPath . -Recurse -Directory | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } ;
+
+$folder_counter = (dir -LiteralPath . -Recurse -Directory).Count
+$k = 0
+$file_counter = (Get-ChildItem -Recurse -Directory -LiteralPath "$Input" | Get-ChildItem -File | where-object {$_.extension -in $fileTypes}).Count
+$l = 0
           
 Foreach ($dir In $Folder) 
     {
+	$k++
+	$percent_folder = [math]::Round($k / $folder_counter * 100)
+	Write-Progress -id 1 -activity "Parent Progress Bar" -Status "Processing $dir (Total $percent_folder %)" -PercentComplete $percent_folder
 	$current_dir = (Get-Location).path + '\' + $dir;
    
     # Set default value for addition to file name 
@@ -58,6 +67,10 @@ Foreach ($dir In $Folder)
         # Check if a file exists 
         If ($file) 
             {
+			
+			$l++
+			$percent_file = [math]::Round($l / $file_counter * 100)
+			Write-Progress -parentId 1 -activity "Child Progress Bar" -Status "Processing $file (Total $percent_file %)" -PercentComplete $percent_file
             # Split the name and rename it to the parent folder 
             $split    = $file.name.split($extension)
 			$zero = If ( $counter -le 9) { "00" } ElseIf ( $counter -le 99){ "0" } Else { "" }

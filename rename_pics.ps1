@@ -1,5 +1,7 @@
 $Host.UI.RawUI.WindowTitle = "Bulk_rename_files_v4"
 $Input = Read-Host "Podaj nazwe sciezki (domyslnie: G:\Mój dysk\.Private\Pics)"
+$Number_from = Read-Host "Podaj liczbe od ktorej zaczac numerowanie katalogow"
+$Number_from = [int]$Number_from
 If ($Input -eq '') {$Input = 'G:\Mój dysk\.Private\Pics'}
 
 cd -LiteralPath "$Input" ;
@@ -37,7 +39,7 @@ function RenameFolderAndSubFolders {
     }
 }
 
-Get-ChildItem -LiteralPath $Input -Directory  | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFolderAndSubFolders -item $_ -number 1 }
+Get-ChildItem -LiteralPath $Input -Directory  | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFolderAndSubFolders -item $_ -number $Number_from }
 # Where-Object { $_.name -Match $_.Parent.Name }
 cls
 $Folder = dir -LiteralPath . -Recurse -Directory | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } ;

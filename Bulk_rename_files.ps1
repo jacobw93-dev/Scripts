@@ -26,6 +26,7 @@ $filesandfolders | Where-Object {$_.PsIscontainer}  |  foreach {
     $New=(($_.name -Replace $regex_str1,".") -Replace $regex_str2,".") -Replace $regex_str3,'$1';
     Rename-Item  -Literalpath $_.Fullname -newname $New -passthru
 }
+$filesandfolders = Get-ChildItem -recurse | Where-Object { $_.name -match $regex_str1}
 $filesandfolders | Where-Object {!$_.PsIscontainer}  |  foreach {
     $New=($_.name -Replace $regex_str1,".") -Replace $regex_str2,".";
     Rename-Item  -Literalpath $_.Fullname -newname $New -passthru

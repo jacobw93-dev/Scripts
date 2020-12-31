@@ -12,16 +12,17 @@ $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @
 $FolderBrowser.SelectedPath
 If ($FolderBrowser.SelectedPath -eq "") {Exit}
 $input_folder = $FolderBrowser.SelectedPath;
-$input_ext = Read-Host -Prompt "`nPodaj nazwę rozszerzenia dla plików do przetworzenia, np. 'mp4'`n";
-$ext = '.' + $input_ext;
-$file_filter = '*' + $ext;
+# $input_ext = Read-Host -Prompt "`nPodaj nazwę rozszerzenia dla plików do przetworzenia, np. 'mp4'`n";
+#$ext = '.' + $input_ext;
+#$file_filter = '*' + $ext;
+$fileTypes = @('.mp4','.mov','.mkv','.wmv')
 $dir_filter = Read-Host -Prompt "Podaj maskę dla katalogów do przetworzenia `n";
 $dir_filter = '*' + $dir_filter + '*';
 $regex_str1 = '[^0-9A-Za-z\.]';
 $regex_str2 = '\.+';
 $regex_str3 = '(\d{3,4}p).*'
 
-dir $source_folder -Directory -filter $dir_filter | ? { !(gci $_ -file -recurse -filter '*.!qb') } | move-item -Destination $input_folder;
+dir $source_folder -Directory -filter $dir_filter | ? { !(gci -LiteralPath $_ -file -recurse -filter '*.!qb') } | move-item -Destination $input_folder;
 cd $input_folder    
 
 $filesandfolders = Get-ChildItem -recurse | Where-Object { $_.name -match $regex_str1} 
@@ -40,24 +41,24 @@ $Folder = dir -Recurse -Directory -filter $dir_filter ;
 Foreach ($dir In $Folder) 
     {
 	$current_dir = (Get-Location).path + '\' + $dir;
-    $Count = Get-ChildItem -File -LiteralPath $current_dir -Filter $file_filter | Measure-Object | %{$_.Count}
+    $Count = Get-ChildItem -File -LiteralPath $current_dir | where-object {$_.extension -in $fileTypes} | Measure-Object | %{$_.Count}
    
     # Set default value for addition to file name 
     $i = 1 
     $newdir = $dir.name + "." 
     # Search for the files set in the filter
-    $files = Get-ChildItem -LiteralPath $dir.fullname -Filter $file_filter -Recurse
+    $files = Get-ChildItem -LiteralPath $dir.fullname -Recurse -File | where-object {$_.extension -in $fileTypes}
     Foreach ($file In $files) 
         { 
         # Check if a file exists 
         If ($file) 
             { 
             # Split the name and rename it to the parent folder 
-            $split    = $file.name.split($ext)
+            $split    = $file.name.split($file.extension)
                 if ( $Count -gt 1 )
-                    { $replace  = $split[0] -Replace $split[0],($newdir + $i + $ext) }
+                    { $replace  = $split[0] -Replace $split[0],($newdir + $i + $file.extension) }
                 else
-					{ $replace  = $split[0] -Replace $split[0],($dir.name + $ext) }
+					{ $replace  = $split[0] -Replace $split[0],($dir.name + $file.extension) }
 			# Trim spaces and rename the file 
             $image_string = $file.fullname.ToString().Trim() 
             #"$split[0] renamed to $replace" 
@@ -66,11 +67,11 @@ Foreach ($dir In $Folder)
             } 
         }
 	if ( $Count -eq 1 )
-		{ dir -LiteralPath $current_dir -Recurse -File -filter $file_filter | Move-Item -Destination $input_folder }
+		{ dir -LiteralPath $current_dir -Recurse -File | where-object {$_.extension -in $fileTypes} | Move-Item -Destination $input_folder }
 	
     }
 
-dir -Recurse -Directory -filter $dir_filter | dir -Recurse -File | where-object {$_.extension -notin $ext} | Remove-Item;
+dir -Recurse -Directory -filter $dir_filter | dir -Recurse -File | where-object {$_.extension -notin $fileTypes} | Remove-Item;
 ls -Directory -filter $dir_filter -recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories()} | Remove-Item;
 
 start . ;

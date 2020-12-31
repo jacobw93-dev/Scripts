@@ -1,9 +1,17 @@
 $Host.UI.RawUI.WindowTitle = "Bulk_rename_files"
 cd D:\Downloads\ ;
-$input_folder = Read-Host -Prompt "Podaj nazwę katalogu, do którego przenieść przetworzone pliki `n";
-$input_folder = (Get-Location).path + '\' + $input_folder;
-echo $input_folder;
-$input_ext = Read-Host -Prompt "Podaj nazwę rozszerzenia dla plików do przetworzenia, np. 'mp4'`n";
+
+Add-Type -AssemblyName System.Windows.Forms
+$FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
+    SelectedPath = 'D:\Downloads\Videos'
+	Description = "Wybierz katalog docelowy"
+}
+ 
+[void]$FolderBrowser.ShowDialog()
+$FolderBrowser.SelectedPath
+If ($FolderBrowser.SelectedPath -eq "") {Exit}
+$input_folder = $FolderBrowser.SelectedPath;
+$input_ext = Read-Host -Prompt "`nPodaj nazwę rozszerzenia dla plików do przetworzenia, np. 'mp4'`n";
 $ext = '.' + $input_ext;
 $file_filter = '*' + $ext;
 $dir_filter = Read-Host -Prompt "Podaj maskę dla katalogów do przetworzenia `n";
@@ -11,12 +19,6 @@ $dir_filter = '*' + $dir_filter + '*';
 $regex_str1 = '[^0-9A-Za-z\.]';
 $regex_str2 = '\.+';
 $regex_str3 = '(\d{3,4}p).*'
-
-if(!(Test-Path $input_folder)) {
-    
-    mkdir $input_folder
-
-}
 
 dir -Directory -filter $dir_filter | ? { !(gci $_ -file -recurse -filter '*.!qb') } | move-item -Destination $input_folder;
 cd $input_folder    
@@ -71,5 +73,4 @@ dir -Recurse -Directory -filter $dir_filter | dir -Recurse -File | where-object 
 ls -Directory -filter $dir_filter -recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories()} | Remove-Item;
 
 start . ;
-cd \ ;
 exit

@@ -1,5 +1,6 @@
 $Host.UI.RawUI.WindowTitle = "Bulk_rename_files"
-cd D:\Downloads\ ;
+
+$source_folder =  'D:\Downloads'
 
 Add-Type -AssemblyName System.Windows.Forms
 $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
@@ -20,7 +21,7 @@ $regex_str1 = '[^0-9A-Za-z\.]';
 $regex_str2 = '\.+';
 $regex_str3 = '(\d{3,4}p).*'
 
-dir -Directory -filter $dir_filter | ? { !(gci $_ -file -recurse -filter '*.!qb') } | move-item -Destination $input_folder;
+dir $source_folder -Directory -filter $dir_filter | ? { !(gci $_ -file -recurse -filter '*.!qb') } | move-item -Destination $input_folder;
 cd $input_folder    
 
 $filesandfolders = Get-ChildItem -recurse | Where-Object { $_.name -match $regex_str1} 

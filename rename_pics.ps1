@@ -1,8 +1,18 @@
-$Host.UI.RawUI.WindowTitle = "Bulk_rename_files_v4"
-$Input = Read-Host "Podaj nazwe sciezki (domyslnie: G:\Mój dysk\.Private\Pics)"
-$Number_from = Read-Host "Podaj liczbe od ktorej zaczac numerowanie katalogow"
+$Host.UI.RawUI.WindowTitle = "Batch rename photos"
+
+Add-Type -AssemblyName System.Windows.Forms
+$FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
+    SelectedPath = 'D:\Downloads'
+	Description = "Wybierz katalog zawierajacy zdjecia"
+}
+ 
+[void]$FolderBrowser.ShowDialog()
+$FolderBrowser.SelectedPath
+If ($FolderBrowser.SelectedPath -eq "") {Exit}
+$Input = $FolderBrowser.SelectedPath;
+
+$Number_from = Read-Host "`nPodaj liczbe od ktorej zaczac numerowanie katalogow"
 $Number_from = [int]$Number_from
-If ($Input -eq '') {$Input = 'G:\Mój dysk\.Private\Pics'}
 
 cd -LiteralPath "$Input" ;
 echo $Input;

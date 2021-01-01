@@ -1,6 +1,15 @@
 $Host.UI.RawUI.WindowTitle = "Bulk_rename_files"
 
-$source_folder =  'D:\Downloads'
+Add-Type -AssemblyName System.Windows.Forms
+$FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
+    SelectedPath = 'D:\Downloads'
+	Description = "Wybierz katalog zrodlowy"
+}
+ 
+[void]$FolderBrowser.ShowDialog()
+$FolderBrowser.SelectedPath
+If ($FolderBrowser.SelectedPath -eq "") {Exit}
+$source_folder = $FolderBrowser.SelectedPath;
 
 Add-Type -AssemblyName System.Windows.Forms
 $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
@@ -11,7 +20,7 @@ $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @
 [void]$FolderBrowser.ShowDialog()
 $FolderBrowser.SelectedPath
 If ($FolderBrowser.SelectedPath -eq "") {Exit}
-$input_folder = $FolderBrowser.SelectedPath;
+$output_folder = $FolderBrowser.SelectedPath;
 # $input_ext = Read-Host -Prompt "`nPodaj nazwę rozszerzenia dla plików do przetworzenia, np. 'mp4'`n";
 #$ext = '.' + $input_ext;
 #$file_filter = '*' + $ext;
@@ -22,8 +31,8 @@ $regex_str1 = '[^0-9A-Za-z\.]';
 $regex_str2 = '\.+';
 $regex_str3 = '(\d{3,4}p).*'
 
-dir $source_folder -Directory -filter $dir_filter | ? { !(gci -LiteralPath $_ -file -recurse -filter '*.!qb') } | move-item -Destination $input_folder;
-cd $input_folder    
+dir $source_folder -Directory -filter $dir_filter | ? { !(gci -LiteralPath $_ -file -recurse -filter '*.!qb') } | move-item -Destination $output_folder;
+cd $output_folder    
 
 $filesandfolders = Get-ChildItem -recurse | Where-Object { $_.name -match $regex_str1} 
 $filesandfolders | Where-Object {$_.PsIscontainer}  |  foreach {
@@ -67,7 +76,7 @@ Foreach ($dir In $Folder)
             } 
         }
 	if ( $Count -eq 1 )
-		{ dir -LiteralPath $current_dir -Recurse -File | where-object {$_.extension -in $fileTypes} | Move-Item -Destination $input_folder }
+		{ dir -LiteralPath $current_dir -Recurse -File | where-object {$_.extension -in $fileTypes} | Move-Item -Destination $output_folder }
 	
     }
 

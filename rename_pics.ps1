@@ -17,7 +17,7 @@ $Number_from = [int]$Number_from
 cd -LiteralPath "$Input" ;
 echo $Input;
 pause;
-$fileTypes = @('.jpg','.png')
+$fileTypes = @('.jpeg','.jpg','.png')
 $regex_str1 = '[^0-9A-Za-z\.]';
 $regex_str2 = '\.+';
 $Date = Get-Date -format "yyyyMMdd_HHmm"
@@ -49,11 +49,34 @@ function RenameFolderAndSubFolders {
     }
 }
 
-Get-ChildItem -LiteralPath $Input -Directory  | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFolderAndSubFolders -item $_ -number $Number_from }
+function RenameFilesRecursive {
+  param($item, $number)
+  $Files = Get-ChildItem -LiteralPath $item.FullName -File -Recurse
+
+  foreach ($file in $Files) {
+    RenameFilesRecursive $file 1
+  }
+
+  while ($true){
+		$zero = If ( $number -le 9) { "00" } ElseIf ( $number -le 99){ "0" } Else { "" }
+        try {
+			Write-Output "Renaming: $($item.FullName)"
+			$NewName = $item.Parent.Name + '-' + $number + '-' + $item.extension
+			$NewName = ($NewName -Replace $regex_str1,".") -Replace $regex_str2,".";
+            Rename-Item -LiteralPath $item.FullName -NewName $NewName -ErrorAction Stop
+            return
+        }
+        catch {}
+        $number++
+    }
+}
+
+Get-ChildItem -LiteralPath $Input -Directory | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFolderAndSubFolders -item $_ -number $Number_from }
 # Where-Object { $_.name -Match $_.Parent.Name }
+#Get-ChildItem -LiteralPath $Input -File | where-object {$_.extension -in $fileTypes} | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFilesRecursive -item $_ -number 1 }
+
 cls
 $Folder = dir -LiteralPath . -Recurse -Directory | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } ;
-
 $folder_counter = (dir -LiteralPath . -Recurse -Directory).Count
 $k = 0
 $file_counter = (Get-ChildItem -Recurse -Directory -LiteralPath "$Input" | Get-ChildItem -File | where-object {$_.extension -in $fileTypes}).Count
@@ -68,7 +91,7 @@ Foreach ($dir In $Folder)
    
     # Set default value for addition to file name 
     $counter = 1 
-    $newdir = $dir.name + "." 
+    $newdir = $dir.name
     # Search for the files set in the filter
     $files = Get-ChildItem -LiteralPath $dir.fullname -File | where-object {$_.extension -in $fileTypes} | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) }
     Foreach ($file In $files) 
@@ -81,10 +104,8 @@ Foreach ($dir In $Folder)
 			$l++
 			$percent_file = [math]::Round($l / $file_counter * 100)
 			Write-Progress -Id 2  -activity "Total Progress Bar" -CurrentOperation "Current file: '$file'" -Status "Processing $l of $file_counter ($percent_file%)"  -PercentComplete $percent_file
-            # Split the name and rename it to the parent folder 
-            $split    = $file.name.split($extension)
 			$zero = If ( $counter -le 9) { "00" } ElseIf ( $counter -le 99){ "0" } Else { "" }
-			$replace  = $split[0] -Replace $split[0],($newdir + $zero + $counter + $extension)
+			$replace  = $newdir + "_" + $zero + $counter + "." + $extension
 			# Trim spaces and rename the file 
             $image_string = $file.fullname.ToString().Trim()
             #"$split[0] renamed to $replace"
@@ -98,5 +119,4 @@ Foreach ($dir In $Folder)
         }
     }
 
-cd -LiteralPath $Input;
 explorer . ;

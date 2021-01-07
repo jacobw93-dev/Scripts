@@ -25,7 +25,13 @@ $output_folder = $FolderBrowser.SelectedPath;
 #$ext = '.' + $input_ext;
 #$file_filter = '*' + $ext;
 $fileTypes = @('.mp4','.mov','.mkv','.wmv')
+$dir_filter = "";
+while ($dir_filter -eq "")
+{
 $dir_filter = Read-Host -Prompt "Podaj maskę dla katalogów do przetworzenia `n";
+$dir_filter = $dir_filter.Trim();
+If ($dir_filter -eq "") {Write-Host "Wprowadź prawidłową wartość"; pause}
+}
 $dir_filter = '*' + $dir_filter + '*';
 $regex_str1 = '[^0-9A-Za-z\.]';
 $regex_str2 = '\.+';

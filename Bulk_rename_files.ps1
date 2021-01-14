@@ -37,7 +37,8 @@ $regex_str1 = '[^0-9A-Za-z\.]';
 $regex_str2 = '\.+';
 $regex_str3 = '(\d{3,4}p).*'
 
-dir $source_folder -Directory -filter $dir_filter | ? { !(gci -LiteralPath $_ -file -recurse -filter '*.!qb') } | move-item -Destination $output_folder;
+cd $source_folder
+dir . -Directory -filter $dir_filter | ? { !(gci -LiteralPath $_ -file -recurse -filter '*.!qb') } | move-item -Destination $output_folder;
 cd $output_folder    
 
 $filesandfolders = Get-ChildItem -recurse | Where-Object { $_.name -match $regex_str1} 
@@ -90,4 +91,5 @@ dir -Recurse -Directory -filter $dir_filter | dir -Recurse -File | where-object 
 ls -Directory -filter $dir_filter -recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories()} | Remove-Item;
 
 start . ;
-exit
+pause
+#exit

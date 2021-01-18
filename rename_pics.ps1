@@ -11,8 +11,6 @@ $FolderBrowser.SelectedPath
 If ($FolderBrowser.SelectedPath -eq "") {Exit}
 $Input = $FolderBrowser.SelectedPath;
 
-$Number_from = Read-Host "`nPodaj liczbe od ktorej zaczac numerowanie katalogow"
-$Number_from = [int]$Number_from
 
 cd -LiteralPath "$Input" ;
 echo $Input;
@@ -71,7 +69,24 @@ function RenameFilesRecursive {
     }
 }
 
-Get-ChildItem -LiteralPath $Input -Directory | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFolderAndSubFolders -item $_ -number $Number_from }
+function ChangeFolders
+{
+	$answer = Read-Host "Czy zamienic nazwy katalogow? T - Tak, N - Nie"
+	Switch ($answer)
+	{
+		T {$Chosen = "Tak"}
+		N {$Chosen = "Nie"}
+		}
+    return $Chosen
+}
+$Choose = ChangeFolders
+echo $Choose ; pause
+If ( $Choose -eq "Tak" )
+{
+	$Number_from = Read-Host "`nPodaj liczbe od ktorej zaczac numerowanie katalogow"
+	$Number_from = [int]$Number_from
+	Get-ChildItem -LiteralPath $Input -Directory | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFolderAndSubFolders -item $_ -number $Number_from }
+}
 # Where-Object { $_.name -Match $_.Parent.Name }
 #Get-ChildItem -LiteralPath $Input -File | where-object {$_.extension -in $fileTypes} | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFilesRecursive -item $_ -number 1 }
 

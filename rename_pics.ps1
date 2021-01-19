@@ -8,13 +8,10 @@ $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @
  
 [void]$FolderBrowser.ShowDialog()
 $FolderBrowser.SelectedPath
-If ($FolderBrowser.SelectedPath -eq "") {Exit}
 $Input = $FolderBrowser.SelectedPath;
 
 
 cd -LiteralPath "$Input" ;
-echo $Input;
-pause;
 $fileTypes = @('.jpeg','.jpg','.png')
 $regex_str1 = '[^0-9A-Za-z\.]';
 $regex_str2 = '\.+';
@@ -38,7 +35,7 @@ function RenameFolderAndSubFolders {
 
   while ($true){
         try {            
-			$NewName = $item.Parent.Name + ' - ' + $number
+			$NewName = $item.Parent.Name + ' - Set ' + $number
             Rename-Item -LiteralPath $item.FullName -NewName $NewName -ErrorAction Stop
             return
         }
@@ -71,17 +68,21 @@ function RenameFilesRecursive {
 
 function ChangeFolders
 {
-	$answer = Read-Host "Czy zamienic nazwy katalogow? T - Tak, N - Nie"
-	Switch ($answer)
+	while (@("t","n") -notcontains $answer)
 	{
-		T {$Chosen = "Tak"}
-		N {$Chosen = "Nie"}
+		$answer = Read-Host "Czy zamienic nazwy katalogow? T (Tak), N (Nie)"
+		$answer = $answer.ToLower().Trim();
+		Switch ($answer)
+		{
+			t {$Chosen = "1"}
+			n {$Chosen = "0"}
 		}
-    return $Chosen
+		If (@("t","n") -notcontains $answer) {Write-Host "Wprowadź prawidłową wartość"; pause}
+    }
+	return $Chosen
 }
 $Choose = ChangeFolders
-echo $Choose ; pause
-If ( $Choose -eq "Tak" )
+If ( $Choose -eq "1" )
 {
 	$Number_from = Read-Host "`nPodaj liczbe od ktorej zaczac numerowanie katalogow"
 	$Number_from = [int]$Number_from

@@ -13,7 +13,8 @@ $InputFolder = $FolderBrowser.SelectedPath;
 
 cd -LiteralPath "$InputFolder" ;
 $fileTypes = @('.jpeg','.jpg','.png')
-gci -File -Recurse | where-Object {$_.extension -notin $fileTypes} | Remove-Item ;
+$excludedFileTypes = @('.!qb','.part')
+Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | gci -File -Recurse | where-Object {$_.extension -notin $fileTypes} | Remove-Item ;
 ls -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories()} | Remove-Item ;
 $regex_str1 = '[^0-9A-Za-z\.]';
 $regex_str2 = '\.+';
@@ -80,10 +81,29 @@ If ( $Choose -eq "1" )
 {
 	$Number_from = Read-Host "`nPodaj liczbe od ktorej zaczac numerowanie katalogow"
 	$Number_from = [int]$Number_from
-	Get-ChildItem -LiteralPath $InputFolder -Directory | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFolderAndSubFolders -item $_ -number $Number_from }
+	Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFolderAndSubFolders -item $_ -number $Number_from }
 }
 
 cls
+
+# Get list of parent folders in root path
+$ParentFolders = Get-ChildItem -LiteralPath $InputFolder | Where {$_.PSIsContainer} | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } 
+
+# For each parent folder get all files recursively and move to parent, append number to file to avoid collisions
+ForEach ($Parent in $ParentFolders) {
+    Get-ChildItem -Path ($Parent.FullName + '\*\*\') -Recurse | Where {!$_.PSIsContainer} | ForEach {
+        $FileInc = 1
+        Do {
+            If ($FileInc -eq 1) {$MovePath = Join-Path -Path $Parent.FullName -ChildPath $_.Name}
+            Else {$MovePath = Join-Path -Path $Parent.FullName -ChildPath "$($_.BaseName)($FileInc)$($_.Extension)"}
+            $FileInc++
+        }
+        While (Test-Path -Path $MovePath -PathType Leaf)
+        Move-Item -Path $_.FullName -Destination $MovePath
+    }
+}
+
+
 $Folder = dir -LiteralPath . -Recurse -Directory | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } ;
 $folder_counter = (dir -LiteralPath . -Recurse -Directory).Count
 $k = 0
@@ -112,7 +132,7 @@ Foreach ($dir In $Folder)
 			$l++
 			$percent_file = [math]::Round($l / $file_counter * 100)
 			Write-Progress -Id 2  -activity "Total Progress Bar" -CurrentOperation "Current file: '$file'" -Status "Processing $l of $file_counter ($percent_file%)"  -PercentComplete $percent_file
-			$replace  = $newdir + "_" + $zero + ($counter.ToString().PadLeft(3,'0')) + "." + $extension
+			$replace  = $newdir + "_" + $zero + ($counter.ToString().PadLeft(4,'0')) + "." + $extension
 			# Trim spaces and rename the file 
             $image_string = $file.fullname.ToString().Trim()
             #"$split[0] renamed to $replace"

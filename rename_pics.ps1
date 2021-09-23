@@ -146,4 +146,6 @@ Foreach ($dir In $Folder)
         }
     }
 
+ls -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories()} | Remove-Item ;
+
 explorer . ;

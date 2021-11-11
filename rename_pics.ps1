@@ -30,9 +30,11 @@ function RenameFolderAndSubFolders {
   }
 
   while ($true){
-        try {			
+        try {
+			$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 			$NewName = $item.Parent.Name + ' - Set ' + ($number.ToString().PadLeft(3,'0'))
             Rename-Item -LiteralPath $item.FullName -NewName $NewName -ErrorAction Stop
+			Write-Output $("$Current_timestamp - Renamed '{0}' to '{1}' " -f $item.FullName,$NewName) | Out-File -FilePath ("$InputFolder" + '\' + "changelog_" + $Date + ".txt") -Append;
             return
         }
         catch {}
@@ -53,7 +55,7 @@ function RenameFilesRecursive {
 			Write-Output "Renaming: $($item.FullName)"
 			$NewName = $item.Parent.Name + '-' + ($number.ToString().PadLeft(3,'0')) + '.' + $item.extension
 			$NewName = ($NewName -Replace $regex_str1,".") -Replace $regex_str2,".";
-            Rename-Item -LiteralPath $item.FullName -NewName $NewName -ErrorAction Stop
+            Rename-Item -LiteralPath $item.FullName -NewName $NewName -ErrorAction Stop;
             return
         }
         catch {}

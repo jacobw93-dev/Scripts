@@ -78,10 +78,22 @@ function ChangeFolders
     }
 	return $Chosen
 }
+
+function Is-Numeric ($Value) {
+    return $Value -match "^[\d\.]+$"
+}
+
 $Choose = ChangeFolders
 If ( $Choose -eq "1" )
 {
 	$Number_from = Read-Host "`nPodaj liczbe od ktorej zaczac numerowanie katalogow"
+	$Number_result = Is-Numeric $Number_from
+	while ($Number_result -eq $False)
+	{		
+		If ($Number_result -eq $False) {Write-Host "Wprowadz prawidlowa wartosc"; pause}
+		$Number_from = Read-Host "`nPodaj liczbe od ktorej zaczac numerowanie katalogow"
+		$Number_result = Is-Numeric $Number_from
+    }
 	$Number_from = [int]$Number_from
 	Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFolderAndSubFolders -item $_ -number $Number_from }
 }

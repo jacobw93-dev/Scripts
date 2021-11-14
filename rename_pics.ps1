@@ -1,29 +1,49 @@
-$Host.UI.RawUI.WindowTitle = "Batch rename photos"
+$Host.UI.RawUI.WindowTitle = "Batch rename images"
+
+$fileTypes = @('.jpeg','.jpg','.png')
+$excludedFileTypes = @('.!qb','.part')
+$regex_str1 = '[^0-9A-Za-z\.]';
+$regex_str2 = '\.+';
+$Date = Get-Date -format "yyyyMMdd_HHmm"
 
 Add-Type -AssemblyName System.Windows.Forms
 $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
-    SelectedPath = 'D:\Downloads\Pics'
+    SelectedPath = 'D:\Downloads\Pics\'
 	Description = "Wybierz katalog zawierajacy zdjecia"
 }
- 
+
 [void]$FolderBrowser.ShowDialog()
 $FolderBrowser.SelectedPath
 $InputFolder = $FolderBrowser.SelectedPath;
 
 
 cd -LiteralPath "$InputFolder" ;
-$fileTypes = @('.jpeg','.jpg','.png')
-$excludedFileTypes = @('.!qb','.part')
+
 Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | gci -File -Recurse | where-Object {$_.extension -notin $fileTypes} | Remove-Item ;
 ls -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories()} | Remove-Item ;
-$regex_str1 = '[^0-9A-Za-z\.]';
-$regex_str2 = '\.+';
-$Date = Get-Date -format "yyyyMMdd_HHmm"
+
+# ustalenie czy mają być zmienione nazwy podfolderów wskazanego wczesniej katalogu $InputFolder. W przypadku opcji M (Master) skrypt powinien zmienić nazwy folderow wewnatrz zadanego katalogu, w przeciwnym wypadku (S - Subfolders) tylko ich podfoldery.
+
+function RenameMode {
+	$answer = $null
+	while (@("M","S") -notcontains $answer)
+	{
+		$answer = Read-Host "Czy zamienic nazwy podkatalogow pierwszego czy drugiego poziomu? `nM (Pierwszy poziom), S (Drugi Poziom)"
+		$answer = $answer.ToUpper().Trim();
+		Switch ($answer)
+		{
+			M {$RenMode = "0"}
+			S {$RenMode = "1"}
+		}
+		If (@("M","S") -notcontains $answer) {Write-Host "Wprowadź prawidłową wartość"; pause}
+    }
+	return $RenMode
+}
 
 function RenameFolderAndSubFolders {
   param($item, $number)
-  $subfolders = Get-ChildItem -LiteralPath $item.FullName -Directory  
-  
+  $subfolders = Get-ChildItem -LiteralPath $item.FullName -Directory
+
   foreach ($folder in $subfolders) {
     RenameFolderAndSubFolders $folder 1
 	Write-Output "Renaming: $($item.FullName)"
@@ -42,10 +62,12 @@ function RenameFolderAndSubFolders {
     }
 }
 
+<# Currently not being used
+
 function RenameFilesRecursive {
   param($item, $number)
   $Files = Get-ChildItem -LiteralPath $item.FullName -File -Recurse
-  
+
   foreach ($file in $Files) {
     RenameFilesRecursive $file 1
   }
@@ -62,9 +84,11 @@ function RenameFilesRecursive {
         $number++
     }
 }
+#>
 
-function ChangeFolders
+function ChangeFoldersNames
 {
+	$answer = $null
 	while (@("t","n") -notcontains $answer)
 	{
 		$answer = Read-Host "Czy zamienic nazwy katalogow? T (Tak), N (Nie)"
@@ -79,29 +103,46 @@ function ChangeFolders
 	return $Chosen
 }
 
-function Is-Numeric ($Value) {
-    return $Value -match "^[\d\.]+$"
-}
-
-$Choose = ChangeFolders
-If ( $Choose -eq "1" )
+function SetFolderNumerator
 {
 	$Number_from = Read-Host "`nPodaj liczbe od ktorej zaczac numerowanie katalogow"
 	$Number_result = Is-Numeric $Number_from
 	while ($Number_result -eq $False)
-	{		
+	{
 		If ($Number_result -eq $False) {Write-Host "Wprowadz prawidlowa wartosc"; pause}
 		$Number_from = Read-Host "`nPodaj liczbe od ktorej zaczac numerowanie katalogow"
 		$Number_result = Is-Numeric $Number_from
-    }
+	}
 	$Number_from = [int]$Number_from
-	Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFolderAndSubFolders -item $_ -number $Number_from }
+	return $Number_from
 }
 
-cls
+function Is-Numeric ($Value) {
+    return $Value -match "^[\d\.]+$"
+}
+
+
+$Choose = ChangeFoldersNames
+If ( $Choose -eq "1" )
+	{
+		$FolderNumerator = SetFolderNumerator
+	}
+
+
+$RenMode = RenameMode
+
+Switch ($RenMode)
+    {
+        "0" {Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator -mode $RenMode }}
+        "1" {Get-ChildItem -LiteralPath $InputFolder -Directory | gci -Directory | ? { !(gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator -mode $RenMode }}
+    }
 
 # Get list of parent folders in root path
-$ParentFolders = Get-ChildItem -LiteralPath $InputFolder | Where {$_.PSIsContainer} | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } 
+Switch ($RenMode)
+		{
+			"0" {$ParentFolders = Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) }}
+			"1" {$ParentFolders = Get-ChildItem -LiteralPath $InputFolder -Directory | gci -Directory | ? { !(gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -in $excludedFileTypes}) }}
+		}
 
 # For each parent folder get all files recursively and move to parent, append number to file to avoid collisions
 ForEach ($Parent in $ParentFolders) {
@@ -123,40 +164,40 @@ $folder_counter = (dir -LiteralPath . -Recurse -Directory).Count
 $k = 0
 $file_counter = (Get-ChildItem -Recurse -Directory -LiteralPath "$InputFolder" | Get-ChildItem -File | where-object {$_.extension -in $fileTypes}).Count
 $l = 0
-          
-Foreach ($dir In $Folder) 
+
+Foreach ($dir In $Folder)
     {
 	$k++
 	$percent_folder = [math]::Round($k / $folder_counter * 100)
 	Write-Progress -Id 1 -activity "Folder Progress Bar" -CurrentOperation "Current directory: '$dir'" -Status "Processing $k of $folder_counter ($percent_folder%)"  -PercentComplete $percent_folder
 	$current_dir = (Get-Location).path + '\' + $dir;
-   
-    # Set default value for addition to file name 
-    $counter = 1 
+
+    # Set default value for addition to file name
+    $counter = 1
     $newdir = $dir.name
     # Search for the files set in the filter
     $files = Get-ChildItem -LiteralPath $dir.fullname -File | where-object {$_.extension -in $fileTypes} | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) }
-    Foreach ($file In $files) 
+    Foreach ($file In $files)
         {
         $Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 		$extension = $file.Extension
-        # Check if a file exists 
-        If ($file) 
+        # Check if a file exists
+        If ($file)
             {
 			$l++
 			$percent_file = [math]::Round($l / $file_counter * 100)
 			Write-Progress -Id 2  -activity "Total Progress Bar" -CurrentOperation "Current file: '$file'" -Status "Processing $l of $file_counter ($percent_file%)"  -PercentComplete $percent_file
 			$replace  = $newdir + "_" + $zero + ($counter.ToString().PadLeft(4,'0')) + "." + $extension
-			# Trim spaces and rename the file 
+			# Trim spaces and rename the file
             $image_string = $file.fullname.ToString().Trim()
             #"$split[0] renamed to $replace"
 			$replace = ($replace -Replace $regex_str1,".") -Replace $regex_str2,".";
             Rename-Item  -LiteralPath "$image_string" "$replace";
 
             Write-Output $("$Current_timestamp;'{0}';'{1}'" -f $image_string,$replace) | Out-File -FilePath ("$InputFolder" + '\' + "changelog_" + $Date + ".txt") -Append;
-            
-            $counter++ 
-            } 
+
+            $counter++
+            }
         }
     }
 

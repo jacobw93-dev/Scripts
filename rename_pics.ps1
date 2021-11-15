@@ -28,7 +28,7 @@ function RenameMode {
 	$answer = $null
 	while (@("M","S") -notcontains $answer)
 	{
-		$answer = Read-Host "Czy zamienic nazwy podkatalogow pierwszego czy drugiego poziomu? `nM (Pierwszy poziom), S (Drugi Poziom)"
+		$answer = Read-Host "`nCzy zamienic nazwy podkatalogow pierwszego czy drugiego poziomu? `nM (Pierwszy poziom), S (Drugi Poziom)"
 		$answer = $answer.ToUpper().Trim();
 		Switch ($answer)
 		{
@@ -91,7 +91,7 @@ function ChangeFoldersNames
 	$answer = $null
 	while (@("t","n") -notcontains $answer)
 	{
-		$answer = Read-Host "Czy zamienic nazwy katalogow? T (Tak), N (Nie)"
+		$answer = Read-Host "`nCzy zamienic nazwy katalogow? T (Tak), N (Nie)"
 		$answer = $answer.ToLower().Trim();
 		Switch ($answer)
 		{

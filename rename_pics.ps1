@@ -121,6 +121,7 @@ function Is-Numeric ($Value) {
     return $Value -match "^[\d\.]+$"
 }
 
+$RenMode = RenameMode
 
 $Choose = ChangeFoldersNames
 If ( $Choose -eq "1" )
@@ -135,7 +136,7 @@ If ( $Choose -eq "1" )
 	}
 
 
-$RenMode = RenameMode
+
 
 
 

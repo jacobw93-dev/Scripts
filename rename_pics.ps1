@@ -22,20 +22,20 @@ cd -LiteralPath "$InputFolder" ;
 Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | gci -File -Recurse | where-Object {$_.extension -notin $fileTypes} | Remove-Item ;
 ls -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories()} | Remove-Item ;
 
-# ustalenie czy mają być zmienione nazwy podfolderów wskazanego wczesniej katalogu $InputFolder. W przypadku opcji M (Master) skrypt powinien zmienić nazwy folderow wewnatrz zadanego katalogu, w przeciwnym wypadku (S - Subfolders) tylko ich podfoldery.
+# ustalenie czy mają być zmienione nazwy podfolderów wskazanego wczesniej katalogu $InputFolder. W przypadku opcji [1] skrypt powinien zmienić nazwy folderow wewnatrz zadanego katalogu, w przeciwnym wypadku [2] tylko ich podfoldery.
 
 function RenameMode {
 	$answer = $null
-	while (@("M","S") -notcontains $answer)
+	while (@("1","2") -notcontains $answer)
 	{
-		$answer = Read-Host "`nCzy zamienic nazwy podkatalogow pierwszego czy drugiego poziomu? `nM (Pierwszy poziom), S (Drugi Poziom)"
+		$answer = Read-Host "`nCzy zamienic nazwy podkatalogow pierwszego czy drugiego poziomu? `n1 (Pierwszy poziom), 2 (Drugi Poziom)"
 		$answer = $answer.ToUpper().Trim();
 		Switch ($answer)
 		{
-			M {$RenMode = "0"}
-			S {$RenMode = "1"}
+			1 {$RenMode = "0"}
+			2 {$RenMode = "1"}
 		}
-		If (@("M","S") -notcontains $answer) {Write-Host "Wprowadź prawidłową wartość"; pause}
+		If (@("1","2") -notcontains $answer) {Write-Host "Wprowadź prawidłową wartość"; pause}
     }
 	return $RenMode
 }
@@ -130,8 +130,8 @@ If ( $Choose -eq "1" )
 		
 		Switch ($RenMode)
 		{
-			"0" {Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator -mode $RenMode }}
-			"1" {Get-ChildItem -LiteralPath $InputFolder -Directory | gci -Directory | ? { !(gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator -mode $RenMode }}
+			"0" {Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator}}
+			"1" {Get-ChildItem -LiteralPath $InputFolder -Directory | gci -Directory | ? { !(gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(20) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator}}
 		}
 	}
 
@@ -190,7 +190,7 @@ Foreach ($dir In $Folder)
 			$l++
 			$percent_file = [math]::Round($l / $file_counter * 100)
 			Write-Progress -Id 2  -activity "Total Progress Bar" -CurrentOperation "Current file: '$file'" -Status "Processing $l of $file_counter ($percent_file%)"  -PercentComplete $percent_file
-			$replace  = $newdir + "_" + $zero + ($counter.ToString().PadLeft(4,'0')) + "." + $extension
+			$replace  = $newdir + "_" + $zero + ($counter.ToString().PadLeft(3,'0')) + "." + $extension
 			# Trim spaces and rename the file
             $image_string = $file.fullname.ToString().Trim()
             #"$split[0] renamed to $replace"

@@ -1,4 +1,6 @@
 $Host.UI.RawUI.WindowTitle = "Batch rename images"
+$Host.PrivateData.ProgressBackgroundColor='Green'
+$Host.PrivateData.ProgressForegroundColor='Black'
 
 $fileTypes = @('.jpeg','.jpg','.png')
 $excludedFileTypes = @('.!qb','.part')
@@ -28,7 +30,7 @@ function RenameMode {
 	$answer = $null
 	while (@("1","2") -notcontains $answer)
 	{
-		$answer = Read-Host "`nCzy zamienic nazwy podkatalogow pierwszego czy drugiego poziomu? `n1 (Pierwszy poziom), 2 (Drugi Poziom)"
+		$answer = Read-Host "`nCzy zamienic nazwy plikow w podkatalogach pierwszego czy drugiego poziomu? `n1 (Pierwszy poziom), 2 (Drugi Poziom)"
 		$answer = $answer.ToUpper().Trim();
 		Switch ($answer)
 		{

@@ -1,5 +1,19 @@
-$folder = Read-Host "Podaj nazwe sciezki: "
-$fileTypes = @('.jpg','.png')
+$Host.UI.RawUI.WindowTitle = "Edit_FileNames_by_ImageWidthHeight"
+$Host.PrivateData.ProgressBackgroundColor='Green'
+$Host.PrivateData.ProgressForegroundColor='Black'
+
+Add-Type -AssemblyName System.Windows.Forms
+$FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
+    SelectedPath = 'D:\Downloads\Pics'
+	Description = "Wybierz katalog zrodlowy"
+}
+ 
+[void]$FolderBrowser.ShowDialog()
+$FolderBrowser.SelectedPath
+If ($FolderBrowser.SelectedPath -eq "") {Exit}
+$folder = $FolderBrowser.SelectedPath;
+
+$fileTypes = @('.jpg','.jpeg','.png')
 
 $image = New-Object -ComObject Wia.ImageFile
 
@@ -25,7 +39,7 @@ $pictures = Get-ChildItem $folder -recurse  | where-object {$_.extension -in $fi
 
     $heightGtWidth = if ([int]$image.Height.ToString() -gt [int]$image.Width.ToString()) {
         $true
-		rename-item -LiteralPath $_.FullName $_.Name.Replace($_.extension, ("_portrait" + $_.extension))
+		rename-item -LiteralPath $_.FullName $_.Name.Replace($_.extension, (".portrait" + $_.extension))
     } else {
         $false
     }

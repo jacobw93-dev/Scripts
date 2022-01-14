@@ -17,6 +17,7 @@ $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @
 [void]$FolderBrowser.ShowDialog()
 $FolderBrowser.SelectedPath
 $InputFolder = $FolderBrowser.SelectedPath;
+$changelog_FullName = "$InputFolder" + '\' + "changelog_" + (((Get-Item -Path $InputFolder).BaseName -Replace $regex_str1,"_") -Replace $regex_str2,"_") + "_" + $Date + ".txt"
 
 
 cd -LiteralPath "$InputFolder" ;
@@ -24,7 +25,7 @@ cd -LiteralPath "$InputFolder" ;
 Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | gci -File -Recurse | where-Object {$_.extension -notin $fileTypes} | Remove-Item ;
 ls -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories()} | Remove-Item ;
 
-# ustalenie czy mają być zmienione nazwy podfolderów wskazanego wczesniej katalogu $InputFolder. W przypadku opcji [1] skrypt powinien zmienić nazwy folderow wewnatrz zadanego katalogu, w przeciwnym wypadku [2] tylko ich podfoldery.
+# ustalenie czy maja byc zmienione nazwy podfolderow wskazanego wczesniej katalogu $InputFolder. W przypadku opcji [1] skrypt powinien zmienic nazwy folderow wewnatrz zadanego katalogu, w przeciwnym wypadku [2] tylko ich podfoldery.
 
 function RenameMode {
 	$answer = $null
@@ -37,7 +38,7 @@ function RenameMode {
 			1 {$RenMode = "0"}
 			2 {$RenMode = "1"}
 		}
-		If (@("1","2") -notcontains $answer) {Write-Host "Wprowadź prawidłową wartość"; pause}
+		If (@("1","2") -notcontains $answer) {Write-Host "Wprowadz prawidlowa wartosc"; pause}
     }
 	return $RenMode
 }
@@ -56,7 +57,7 @@ function RenameFolderAndSubFolders {
 			$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 			$NewName = $item.Parent.Name + ' - Set ' + ($number.ToString().PadLeft(3,'0'))
             Rename-Item -LiteralPath $item.FullName -NewName $NewName -ErrorAction Stop
-			Write-Output $("$Current_timestamp;'{0}';'{1}' " -f $item.FullName,$NewName) | Out-File -FilePath ("$InputFolder" + '\' + "changelog_" + $Date + ".txt") -Append;
+			Write-Output $("$Current_timestamp;'{0}';'{1}' " -f $item.FullName,$NewName) | Out-File -FilePath ($changelog_FullName) -Append;
             return
         }
         catch {}
@@ -100,7 +101,7 @@ function ChangeFoldersNames
 			t {$Chosen = "1"}
 			n {$Chosen = "0"}
 		}
-		If (@("t","n") -notcontains $answer) {Write-Host "Wprowadź prawidłową wartość"; pause}
+		If (@("t","n") -notcontains $answer) {Write-Host "Wprowadz prawidlowa wartosc"; pause}
     }
 	return $Chosen
 }
@@ -199,7 +200,7 @@ Foreach ($dir In $Folder)
 			$replace = ($replace -Replace $regex_str1,".") -Replace $regex_str2,".";
             Rename-Item  -LiteralPath "$image_string" "$replace";
 
-            Write-Output $("$Current_timestamp;'{0}';'{1}'" -f $image_string,$replace) | Out-File -FilePath ("$InputFolder" + '\' + "changelog_" + $Date + ".txt") -Append;
+            Write-Output $("$Current_timestamp;'{0}';'{1}'" -f $image_string,$replace) | Out-File -FilePath ($changelog_FullName) -Append;
 
             $counter++
             }

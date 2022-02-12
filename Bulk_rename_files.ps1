@@ -1,6 +1,7 @@
 $Host.UI.RawUI.WindowTitle = "Bulk_rename_files"
 
 Add-Type -AssemblyName System.Windows.Forms
+Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -name 'Hidden' -value 1 
 $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
     SelectedPath = 'D:\Downloads'
 	Description = "Wybierz katalog zrodlowy"
@@ -13,22 +14,26 @@ $source_folder = $FolderBrowser.SelectedPath;
 
 Add-Type -AssemblyName System.Windows.Forms
 $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
-    SelectedPath = 'D:\Downloads\Videos'
+    SelectedPath = 'D:\Downloads\Videos\XXX'
 	Description = "Wybierz katalog docelowy"
 }
  
 [void]$FolderBrowser.ShowDialog()
 $FolderBrowser.SelectedPath
-If ($FolderBrowser.SelectedPath -eq "") {Exit}
+If (!(Test-Path $FolderBrowser.SelectedPath)) {New-Item $FolderBrowser.SelectedPath}
 $output_folder = $FolderBrowser.SelectedPath;
+
+Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -name 'Hidden' -value 0
+
 # $input_ext = Read-Host -Prompt "`nPodaj nazwę rozszerzenia dla plików do przetworzenia, np. 'mp4'`n";
 #$ext = '.' + $input_ext;
 #$file_filter = '*' + $ext;
 $fileTypes = @('.mp4','.mov','.mkv','.wmv')
+$excludedFileTypes = @('.!qb','.part')
 $dir_filter = "";
 while ($dir_filter -eq "")
 {
-$dir_filter = Read-Host -Prompt "Podaj maskę dla katalogów do przetworzenia `n";
+$dir_filter = Read-Host -Prompt "`nPodaj maskę dla katalogów do przetworzenia `n";
 $dir_filter = $dir_filter.Trim();
 If ($dir_filter -eq "") {Write-Host "Wprowadź prawidłową wartość"; pause}
 }
@@ -38,7 +43,7 @@ $regex_str2 = '\.+';
 $regex_str3 = '(\d{3,4}p).*'
 
 cd $source_folder
-dir . -Directory -filter $dir_filter | ? { !(gci -LiteralPath $_ -file -recurse -filter '*.!qb') } | move-item -Destination $output_folder;
+dir . -Directory -filter $dir_filter | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | move-item -Destination $output_folder;
 cd $output_folder    
 
 $filesandfolders = Get-ChildItem -recurse | Where-Object { $_.name -match $regex_str1} 
@@ -83,7 +88,7 @@ Foreach ($dir In $Folder)
             } 
         }
 	if ( $Count -eq 1 )
-		{ dir -LiteralPath $current_dir -Recurse -File | where-object {$_.extension -in $fileTypes} | Move-Item -Destination $output_folder }
+		{ dir -LiteralPath $current_dir -Recurse -File | where-object {$_.extension -in $fileTypes} | Move-Item -Destination $output_folder -ErrorAction SilentlyContinue}
 	
     }
 
@@ -91,5 +96,5 @@ dir -Recurse -Directory -filter $dir_filter | dir -Recurse -File | where-object 
 ls -Directory -filter $dir_filter -recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories()} | Remove-Item;
 
 start . ;
-pause
-#exit
+cd $PSScriptRoot
+# exit

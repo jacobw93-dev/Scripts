@@ -25,7 +25,7 @@ $output_folder = $FolderBrowser.SelectedPath;
 
 Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -name 'Hidden' -value 0
 
-# $input_ext = Read-Host -Prompt "`nPodaj nazwę rozszerzenia dla plików do przetworzenia, np. 'mp4'`n";
+# $input_ext = Read-Host -Prompt "`nPodaj nazwe rozszerzenia dla plikow do przetworzenia, np. 'mp4'`n";
 #$ext = '.' + $input_ext;
 #$file_filter = '*' + $ext;
 $fileTypes = @('.mp4','.mov','.mkv','.wmv')
@@ -33,9 +33,9 @@ $excludedFileTypes = @('.!qb','.part')
 $dir_filter = "";
 while ($dir_filter -eq "")
 {
-$dir_filter = Read-Host -Prompt "`nPodaj maskę dla katalogów do przetworzenia `n";
+$dir_filter = Read-Host -Prompt "`nPodaj maske dla katalogow do przetworzenia `n";
 $dir_filter = $dir_filter.Trim();
-If ($dir_filter -eq "") {Write-Host "Wprowadź prawidłową wartość"; pause}
+If ($dir_filter -eq "") {Write-Host "Wprowadz prawidlowa wartosc"; pause}
 }
 $dir_filter = '*' + $dir_filter + '*';
 $regex_str1 = '[^0-9A-Za-z\.]';

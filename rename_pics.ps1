@@ -57,7 +57,7 @@ function RenameFolderAndSubFolders {
 			$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 			$NewName = $item.Parent.Name + ' - Set ' + ($number.ToString().PadLeft(3,'0'))
             Rename-Item -LiteralPath $item.FullName -NewName $NewName -ErrorAction Stop
-			Write-Output $("$Current_timestamp;'{0}';'{1}' " -f $item.FullName,$NewName) | Out-File -FilePath ($changelog_FullName) -Append;
+			Write-Output $("$Current_timestamp;'{0}';'{1}' " -f $item.FullName,$NewName) | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
             return
         }
         catch {}
@@ -200,7 +200,7 @@ Foreach ($dir In $Folder)
 			$replace = ($replace -Replace $regex_str1,".") -Replace $regex_str2,".";
             Rename-Item  -LiteralPath "$image_string" "$replace";
 
-            Write-Output $("$Current_timestamp;'{0}';'{1}'" -f $image_string,$replace) | Out-File -FilePath ($changelog_FullName) -Append;
+            Write-Output $("$Current_timestamp;'{0}';'{1}'" -f $image_string,$replace) | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 
             $counter++
             }

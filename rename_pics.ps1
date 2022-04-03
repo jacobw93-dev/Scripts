@@ -1,5 +1,5 @@
 $Host.UI.RawUI.WindowTitle = "Batch rename images"
-$Host.PrivateData.ProgressBackgroundColor='Green'
+$Host.PrivateData.ProgressBackgroundColor='Gray'
 $Host.PrivateData.ProgressForegroundColor='Black'
 
 $fileTypes = @('.jpeg','.jpg','.png')
@@ -9,14 +9,16 @@ $regex_str2 = '\.+';
 $Date = Get-Date -format "yyyyMMdd_HHmm"
 
 Add-Type -AssemblyName System.Windows.Forms
+Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -name 'Hidden' -value 1 
 $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
     SelectedPath = 'D:\Downloads\Pics\'
-	Description = "Wybierz katalog zawierajacy zdjecia"
+	Description = "Select a directory containing images"
 }
 
 [void]$FolderBrowser.ShowDialog()
 $FolderBrowser.SelectedPath
 $InputFolder = $FolderBrowser.SelectedPath;
+Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -name 'Hidden' -value 0
 $changelog_FullName = "$InputFolder" + '\' + "changelog_" + (((Get-Item -Path $InputFolder).BaseName -Replace $regex_str1,"_") -Replace $regex_str2,"_") + "_" + $Date + ".txt"
 
 
@@ -25,20 +27,20 @@ cd -LiteralPath "$InputFolder" ;
 Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | gci -File -Recurse | where-Object {$_.extension -notin $fileTypes} | Remove-Item ;
 ls -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories()} | Remove-Item ;
 
-# ustalenie czy maja byc zmienione nazwy podfolderow wskazanego wczesniej katalogu $InputFolder. W przypadku opcji [1] skrypt powinien zmienic nazwy folderow wewnatrz zadanego katalogu, w przeciwnym wypadku [2] tylko ich podfoldery.
+# determine whether to rename subfolders of the previously specified $InputFolder directory. In case of option [1] the script should rename the folders inside the given folder, otherwise [2] only their subfolders.
 
 function RenameMode {
 	$answer = $null
 	while (@("1","2") -notcontains $answer)
 	{
-		$answer = Read-Host "`nCzy zamienic nazwy plikow w podkatalogach pierwszego czy drugiego poziomu? `n1 (Pierwszy poziom), 2 (Drugi Poziom)"
+		$answer = Read-Host "`nShould I swap file names in first or second level subdirectories? `n1 (First Level), 2 (Second Level)"
 		$answer = $answer.ToUpper().Trim();
 		Switch ($answer)
 		{
 			1 {$RenMode = "0"}
 			2 {$RenMode = "1"}
 		}
-		If (@("1","2") -notcontains $answer) {Write-Host "Wprowadz prawidlowa wartosc"; pause}
+		If (@("1","2") -notcontains $answer) {Write-Host "Enter the correct value"; pause}
     }
 	return $RenMode
 }
@@ -94,26 +96,26 @@ function ChangeFoldersNames
 	$answer = $null
 	while (@("t","n") -notcontains $answer)
 	{
-		$answer = Read-Host "`nCzy zamienic nazwy katalogow? T (Tak), N (Nie)"
+		$answer = Read-Host "`nShould I swap directory names? Y (Yes), N (No)"
 		$answer = $answer.ToLower().Trim();
 		Switch ($answer)
 		{
-			t {$Chosen = "1"}
+			y {$Chosen = "1"}
 			n {$Chosen = "0"}
 		}
-		If (@("t","n") -notcontains $answer) {Write-Host "Wprowadz prawidlowa wartosc"; pause}
+		If (@("y","n") -notcontains $answer) {Write-Host "Enter the correct value"; pause}
     }
 	return $Chosen
 }
 
 function SetFolderNumerator
 {
-	$Number_from = Read-Host "`nPodaj liczbe od ktorej zaczac numerowanie katalogow"
+	$Number_from = Read-Host "`nSpecify the number from which to start numbering the directories"
 	$Number_result = Is-Numeric $Number_from
 	while ($Number_result -eq $False)
 	{
-		If ($Number_result -eq $False) {Write-Host "Wprowadz prawidlowa wartosc"; pause}
-		$Number_from = Read-Host "`nPodaj liczbe od ktorej zaczac numerowanie katalogow"
+		If ($Number_result -eq $False) {Write-Host "Enter the correct value"; pause}
+		$Number_from = Read-Host "`nSpecify the number from which to start numbering the directories"
 		$Number_result = Is-Numeric $Number_from
 	}
 	$Number_from = [int]$Number_from

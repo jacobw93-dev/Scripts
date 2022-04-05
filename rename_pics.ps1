@@ -94,7 +94,7 @@ function RenameFilesRecursive {
 function ChangeFoldersNames
 {
 	$answer = $null
-	while (@("t","n") -notcontains $answer)
+	while (@("y","n") -notcontains $answer)
 	{
 		$answer = Read-Host "`nShould I swap directory names? Y (Yes), N (No)"
 		$answer = $answer.ToLower().Trim();

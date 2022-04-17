@@ -7,9 +7,13 @@ $excludedFileTypes = @('.!qb','.part')
 $regex_str1 = '[^0-9A-Za-z\.]';
 $regex_str2 = '\.+';
 $Date = Get-Date -format "yyyyMMdd_HHmm"
+$key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
 
 Add-Type -AssemblyName System.Windows.Forms
-Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -name 'Hidden' -value 1 
+Set-ItemProperty $key Hidden 1
+Set-ItemProperty $key ShowSuperHidden 1
+Stop-Process -processname explorer
+
 $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
     SelectedPath = 'D:\Downloads\Pics\'
 	Description = "Select a directory containing images"
@@ -18,7 +22,9 @@ $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @
 [void]$FolderBrowser.ShowDialog()
 $FolderBrowser.SelectedPath
 $InputFolder = $FolderBrowser.SelectedPath;
-Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -name 'Hidden' -value 0
+Set-ItemProperty $key Hidden 0
+Set-ItemProperty $key ShowSuperHidden 0
+Stop-Process -processname explorer
 $changelog_FullName = "$InputFolder" + '\' + "changelog_" + (((Get-Item -Path $InputFolder).BaseName -Replace $regex_str1,"_") -Replace $regex_str2,"_") + "_" + $Date + ".txt"
 
 

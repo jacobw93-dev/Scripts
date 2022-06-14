@@ -15,7 +15,7 @@ Set-ItemProperty $key ShowSuperHidden 1
 Stop-Process -processname explorer
 
 $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
-    SelectedPath = 'D:\Downloads\Pics\'
+    SelectedPath = $env:USERPROFILE + '\Pictures\'
 	Description = "Select a directory containing images"
 }
 

@@ -3,8 +3,8 @@ $Host.UI.RawUI.WindowTitle = "Bulk_rename_files"
 Add-Type -AssemblyName System.Windows.Forms
 Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -name 'Hidden' -value 1 
 $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
-    SelectedPath = 'D:\Downloads'
-	Description = "Wybierz katalog zrodlowy"
+    SelectedPath = $env:USERPROFILE + '\Downloads'
+	Description = "Select source directory"
 }
  
 [void]$FolderBrowser.ShowDialog()
@@ -14,8 +14,8 @@ $source_folder = $FolderBrowser.SelectedPath;
 
 Add-Type -AssemblyName System.Windows.Forms
 $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
-    SelectedPath = 'D:\Downloads\Videos\XXX'
-	Description = "Wybierz katalog docelowy"
+    SelectedPath = $env:USERPROFILE + '\Videos\'
+	Description = "Select target directory"
 }
  
 [void]$FolderBrowser.ShowDialog()
@@ -25,7 +25,7 @@ $output_folder = $FolderBrowser.SelectedPath;
 
 Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -name 'Hidden' -value 0
 
-# $input_ext = Read-Host -Prompt "`nPodaj nazwe rozszerzenia dla plikow do przetworzenia, np. 'mp4'`n";
+# $input_ext = Read-Host -Prompt "`nSpecify the extension name for the files to be processed, e.g. 'mp4'`n";
 #$ext = '.' + $input_ext;
 #$file_filter = '*' + $ext;
 $fileTypes = @('.mp4','.mov','.mkv','.wmv')
@@ -33,9 +33,9 @@ $excludedFileTypes = @('.!qb','.part')
 $dir_filter = "";
 while ($dir_filter -eq "")
 {
-$dir_filter = Read-Host -Prompt "`nPodaj maske dla katalogow do przetworzenia `n";
+$dir_filter = Read-Host -Prompt "`nSpecify the mask for the directories to be processed `n";
 $dir_filter = $dir_filter.Trim();
-If ($dir_filter -eq "") {Write-Host "Wprowadz prawidlowa wartosc"; pause}
+If ($dir_filter -eq "") {Write-Host "Enter correct value"; pause}
 }
 $dir_filter = '*' + $dir_filter + '*';
 $regex_str1 = '[^0-9A-Za-z\.]';

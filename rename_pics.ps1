@@ -3,7 +3,7 @@ $Host.PrivateData.ProgressBackgroundColor='Gray'
 $Host.PrivateData.ProgressForegroundColor='Black'
 
 $fileTypes = @('.jpeg','.jpg','.png')
-$excludedFileTypes = @('.!qb','.part')
+$excludedFileTypes = @('.!qb','.part','.zip')
 $regex_str1 = '[^0-9A-Za-z\.]';
 $regex_str2 = '\.+';
 $Date = Get-Date -format "yyyyMMdd_HHmm"
@@ -12,7 +12,7 @@ $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
 Add-Type -AssemblyName System.Windows.Forms
 Set-ItemProperty $key Hidden 1
 Set-ItemProperty $key ShowSuperHidden 1
-Stop-Process -processname explorer
+#Stop-Process -processname explorer
 
 $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
     SelectedPath = $env:USERPROFILE + '\Pictures\'
@@ -24,13 +24,14 @@ $FolderBrowser.SelectedPath
 $InputFolder = $FolderBrowser.SelectedPath;
 Set-ItemProperty $key Hidden 0
 Set-ItemProperty $key ShowSuperHidden 0
-Stop-Process -processname explorer
+#Stop-Process -processname explorer
 $changelog_FullName = "$InputFolder" + '\' + "changelog_" + (((Get-Item -Path $InputFolder).BaseName -Replace $regex_str1,"_") -Replace $regex_str2,"_") + "_" + $Date + ".txt"
 
 
 cd -LiteralPath "$InputFolder" ;
-
 Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | gci -File -Recurse | where-Object {$_.extension -notin $fileTypes} | Remove-Item ;
+
+
 ls -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories()} | Remove-Item ;
 
 # determine whether to rename subfolders of the previously specified $InputFolder directory. In case of option [1] the script should rename the folders inside the given folder, otherwise [2] only their subfolders.
@@ -138,17 +139,22 @@ $Choose = ChangeFoldersNames
 If ( $Choose -eq "1" )
 	{
 		$FolderNumerator = SetFolderNumerator
-		
-		Switch ($RenMode)
-		{
-			"0" {Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator}}
-			"1" {Get-ChildItem -LiteralPath $InputFolder -Directory | gci -Directory | ? { !(gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator}}
-		}
 	}
 
 
 
+$Archives = ls -LiteralPath "$InputFolder" -Recurse -Filter *.zip | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) } ;
+$Archive_counter = (gci $InputFolder -Recurse -Filter *.zip).Count
+$k = 0
 
+Foreach ($Archive In $Archives)
+    {
+	$k++
+	$percent_Archive = [math]::Round($k / $Archive_counter * 100)
+	Write-Progress -Id 1  -activity "Total Progress Bar" -CurrentOperation "Current file: '$Archive'" -Status "Processing $k of $Archive_counter ($percent_Archive%)"  -PercentComplete $percent_Archive
+	$n=($Archive.Fullname.trimend('.zip'))
+	Expand-Archive -LiteralPath $Archive.Fullname -DestinationPath $n -Force
+	}
 
 
 # Get list of parent folders in root path
@@ -160,6 +166,7 @@ Switch ($RenMode)
 
 # For each parent folder get all files recursively and move to parent, append number to file to avoid collisions
 ForEach ($Parent in $ParentFolders) {
+	ls -LiteralPath $Parent -Directory -Recurse | where { $_.GetFiles() -and -not $_.GetDirectories()} | ForEach-Object { $n=($Parent.Parent.FullName + '\' + $Parent.BaseName + ' - ' + $_.BaseName); Move-Item -LiteralPath $_.FullName -Destination $n}
     Get-ChildItem -Path ($Parent.FullName + '\*\*\') -Recurse | Where {!$_.PSIsContainer} | ForEach {
         $FileInc = 1
         Do {
@@ -168,8 +175,15 @@ ForEach ($Parent in $ParentFolders) {
             $FileInc++
         }
         While (Test-Path -Path $MovePath -PathType Leaf)
-        Move-Item -Path $_.FullName -Destination $MovePath
+        Move-Item -LiteralPath $_.FullName -Destination $MovePath
     }
+}
+
+
+Switch ($RenMode)
+{
+	"0" {Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator}}
+	"1" {Get-ChildItem -LiteralPath $InputFolder -Directory | gci -Directory | ? { !(gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator}}
 }
 
 

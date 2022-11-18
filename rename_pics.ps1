@@ -142,8 +142,9 @@ If ( $Choose -eq "1" )
 	}
 
 
+# Issue with the following function described here: https://github.com/PowerShell/Microsoft.PowerShell.Archive/issues/115
 
-$Archives = ls -LiteralPath "$InputFolder" -Recurse -Filter *.zip | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) } ;
+<# $Archives = ls -LiteralPath "$InputFolder" -Recurse -Filter *.zip | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) } ;
 $Archive_counter = (gci $InputFolder -Recurse -Filter *.zip).Count
 $k = 0
 
@@ -155,18 +156,18 @@ Foreach ($Archive In $Archives)
 	$n=($Archive.Fullname.trimend('.zip'))
 	Expand-Archive -LiteralPath $Archive.Fullname -DestinationPath $n -Force
 	}
-
+ #>
 
 # Get list of parent folders in root path
 Switch ($RenMode)
 		{
-			"0" {$ParentFolders = Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) }}
+			"0" {$ParentFolders = Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -in $excludedFileTypes}) }}
 			"1" {$ParentFolders = Get-ChildItem -LiteralPath $InputFolder -Directory | gci -Directory | ? { !(gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -in $excludedFileTypes}) }}
 		}
 
 # For each parent folder get all files recursively and move to parent, append number to file to avoid collisions
 ForEach ($Parent in $ParentFolders) {
-	ls -LiteralPath $Parent -Directory -Recurse | where { $_.GetFiles() -and -not $_.GetDirectories()} | ForEach-Object { $n=($Parent.Parent.FullName + '\' + $Parent.BaseName + ' - ' + $_.BaseName); Move-Item -LiteralPath $_.FullName -Destination $n}
+	ls -Path ($Parent.FullName) -Directory -Recurse | where { $_.GetFiles() -and -not $_.GetDirectories()} | ForEach-Object { $n=($Parent.FullName + '\..\' + $_.Parent.BaseName + ' - ' + $_.BaseName ); Move-Item -LiteralPath $_.FullName -Destination $n}
     Get-ChildItem -Path ($Parent.FullName + '\*\*\') -Recurse | Where {!$_.PSIsContainer} | ForEach {
         $FileInc = 1
         Do {

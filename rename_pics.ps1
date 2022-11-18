@@ -1,5 +1,5 @@
 $Host.UI.RawUI.WindowTitle = "Batch rename images"
-$Host.PrivateData.ProgressBackgroundColor='Gray'
+$Host.PrivateData.ProgressBackgroundColor='Green'
 $Host.PrivateData.ProgressForegroundColor='Black'
 
 $fileTypes = @('.jpeg','.jpg','.png')
@@ -143,8 +143,9 @@ If ( $Choose -eq "1" )
 
 
 # Issue with the following function described here: https://github.com/PowerShell/Microsoft.PowerShell.Archive/issues/115
+# Work-around solution - renaming files to replace special characters using regular expression 
 
-<# $Archives = ls -LiteralPath "$InputFolder" -Recurse -Filter *.zip | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) } ;
+$Archives = ls -LiteralPath "$InputFolder" -Recurse -Filter *.zip | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) } ;
 $Archive_counter = (gci $InputFolder -Recurse -Filter *.zip).Count
 $k = 0
 
@@ -153,10 +154,12 @@ Foreach ($Archive In $Archives)
 	$k++
 	$percent_Archive = [math]::Round($k / $Archive_counter * 100)
 	Write-Progress -Id 1  -activity "Total Progress Bar" -CurrentOperation "Current file: '$Archive'" -Status "Processing $k of $Archive_counter ($percent_Archive%)"  -PercentComplete $percent_Archive
-	$n=($Archive.Fullname.trimend('.zip'))
-	Expand-Archive -LiteralPath $Archive.Fullname -DestinationPath $n -Force
+	$NewName = (($Archive.Name -Replace $regex_str1,".") -Replace $regex_str2,".");
+    $NewFullName = ($Archive.FullName -Replace $Archive.Name, '') + (($Archive.Name -Replace $regex_str1,".") -Replace $regex_str2,".");
+    $TargetPath = ($Archive.FullName -Replace $Archive.Name, '') + (($Archive.BaseName -Replace $regex_str1,".") -Replace $regex_str2,".");
+    Rename-Item  -LiteralPath $Archive.FullName $NewName;
+	Expand-Archive -LiteralPath $NewFullName -DestinationPath $TargetPath -Force
 	}
- #>
 
 # Get list of parent folders in root path
 Switch ($RenMode)

@@ -24,7 +24,7 @@ $InputFolder = $FolderBrowser.SelectedPath;
 Set-ItemProperty $key Hidden 0
 Set-ItemProperty $key ShowSuperHidden 0
 #Stop-Process -processname explorer
-$changelog_FullName = "$InputFolder" + '\' + "changelog_" + ((Get-Item -Path $InputFolder).BaseName -Replace $regex_str,"_" + "_" + $Date + ".txt"
+$changelog_FullName = "$InputFolder" + '\' + "changelog_" + ((Get-Item -Path $InputFolder).BaseName -Replace $regex_str,"_") + "_" + $Date + ".txt"
 
 
 cd -LiteralPath "$InputFolder" ;
@@ -157,7 +157,7 @@ Foreach ($Archive In $Archives)
 	Expand-Archive -LiteralPath $NewFullName -DestinationPath $TargetPath -Force
     write-host '`nNewName = ' + $NewName + '`nNewFullName = ' + $NewFullName + '`nTargetPath = ' + $TargetPath
 	}
-pause
+	
 # Get list of parent folders in root path
 Switch ($RenMode)
 		{

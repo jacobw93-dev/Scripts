@@ -221,7 +221,7 @@ Foreach ($dir In $Folder)
 			# Trim spaces and rename the file
             $image_string = $file.fullname.ToString().Trim()
             #"$split[0] renamed to $replace"
-			$replace = ($replace -Replace $regex_str,".");
+			$replace = (($replace -Replace $regex_str,".") - replace '\.+','.');
             Rename-Item  -LiteralPath "$image_string" "$replace";
 
             Write-Output $("$Current_timestamp;'{0}';'{1}'" -f $image_string,$replace) | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;

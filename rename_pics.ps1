@@ -4,8 +4,7 @@ $Host.PrivateData.ProgressForegroundColor='Black'
 
 $fileTypes = @('.jpeg','.jpg','.png')
 $excludedFileTypes = @('.!qb','.part','.zip')
-$regex_str1 = '[^0-9A-Za-z\.]';
-$regex_str2 = '\.+';
+$regex_str = '[^0-9A-Za-z\.]+';
 $Date = Get-Date -format "yyyyMMdd_HHmm"
 $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
 
@@ -25,7 +24,7 @@ $InputFolder = $FolderBrowser.SelectedPath;
 Set-ItemProperty $key Hidden 0
 Set-ItemProperty $key ShowSuperHidden 0
 #Stop-Process -processname explorer
-$changelog_FullName = "$InputFolder" + '\' + "changelog_" + (((Get-Item -Path $InputFolder).BaseName -Replace $regex_str1,"_") -Replace $regex_str2,"_") + "_" + $Date + ".txt"
+$changelog_FullName = "$InputFolder" + '\' + "changelog_" + ((Get-Item -Path $InputFolder).BaseName -Replace $regex_str,"_" + "_" + $Date + ".txt"
 
 
 cd -LiteralPath "$InputFolder" ;
@@ -88,7 +87,7 @@ function RenameFilesRecursive {
         try {
 			Write-Output "Renaming: $($item.FullName)"
 			$NewName = $item.Parent.Name + '-' + ($number.ToString().PadLeft(3,'0')) + '.' + $item.extension
-			$NewName = ($NewName -Replace $regex_str1,".") -Replace $regex_str2,".";
+			$NewName = ($NewName -Replace $regex_str,".");
             Rename-Item -LiteralPath $item.FullName -NewName $NewName -ErrorAction Stop;
             return
         }
@@ -142,10 +141,7 @@ If ( $Choose -eq "1" )
 	}
 
 
-# Issue with the following function described here: https://github.com/PowerShell/Microsoft.PowerShell.Archive/issues/115
-# Work-around solution - renaming files to replace special characters using regular expression 
-
-$Archives = ls -LiteralPath "$InputFolder" -Recurse -Filter *.zip | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) } ;
+$Archives = ls -LiteralPath "$InputFolder" -Recurse -Filter *.zip ;
 $Archive_counter = (gci $InputFolder -Recurse -Filter *.zip).Count
 $k = 0
 
@@ -154,13 +150,14 @@ Foreach ($Archive In $Archives)
 	$k++
 	$percent_Archive = [math]::Round($k / $Archive_counter * 100)
 	Write-Progress -Id 1  -activity "Total Progress Bar" -CurrentOperation "Current file: '$Archive'" -Status "Processing $k of $Archive_counter ($percent_Archive%)"  -PercentComplete $percent_Archive
-	$NewName = (($Archive.Name -Replace $regex_str1,".") -Replace $regex_str2,".");
-    $NewFullName = ($Archive.FullName -Replace $Archive.Name, '') + (($Archive.Name -Replace $regex_str1,".") -Replace $regex_str2,".");
-    $TargetPath = ($Archive.FullName -Replace $Archive.Name, '') + (($Archive.BaseName -Replace $regex_str1,".") -Replace $regex_str2,".");
-    Rename-Item  -LiteralPath $Archive.FullName $NewName;
+	$NewName = ($Archive.Name -Replace $regex_str,".");
+    $NewFullName = ($Archive.FullName -Replace $Archive.Name, $NewName);
+    $TargetPath = ($Archive.FullName -Replace $Archive.BaseName, $NewName).trimend($Archive.Extension);
+    Rename-Item  -LiteralPath $Archive.FullName -NewName $NewName;
 	Expand-Archive -LiteralPath $NewFullName -DestinationPath $TargetPath -Force
+    write-host '`nNewName = ' + $NewName + '`nNewFullName = ' + $NewFullName + '`nTargetPath = ' + $TargetPath
 	}
-
+pause
 # Get list of parent folders in root path
 Switch ($RenMode)
 		{
@@ -183,6 +180,7 @@ ForEach ($Parent in $ParentFolders) {
     }
 }
 
+ls -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories()} | Remove-Item ;
 
 Switch ($RenMode)
 {
@@ -223,7 +221,7 @@ Foreach ($dir In $Folder)
 			# Trim spaces and rename the file
             $image_string = $file.fullname.ToString().Trim()
             #"$split[0] renamed to $replace"
-			$replace = ($replace -Replace $regex_str1,".") -Replace $regex_str2,".";
+			$replace = ($replace -Replace $regex_str,".");
             Rename-Item  -LiteralPath "$image_string" "$replace";
 
             Write-Output $("$Current_timestamp;'{0}';'{1}'" -f $image_string,$replace) | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;

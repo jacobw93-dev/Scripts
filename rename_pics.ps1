@@ -151,12 +151,13 @@ Foreach ($Archive In $Archives)
 	$percent_Archive = [math]::Round($k / $Archive_counter * 100)
 	Write-Progress -Id 1  -activity "Total Progress Bar" -CurrentOperation "Current file: '$Archive'" -Status "Processing $k of $Archive_counter ($percent_Archive%)"  -PercentComplete $percent_Archive
 	$NewName = ($Archive.Name -Replace $regex_str,".");
-    $NewFullName = ($Archive.FullName -Replace $Archive.Name, $NewName);
-    $TargetPath = ($Archive.FullName -Replace $Archive.BaseName, $NewName).trimend($Archive.Extension);
+    $NewBaseName = ($Archive.Name -Replace $regex_str,".");
+    $NewFullName = ($Archive.FullName -Replace [regex]::Escape($Archive.Name), $NewName);
+    $TargetPath = ($Archive.FullName -Replace [regex]::Escape($Archive.BaseName), $NewBaseName).trimend($Archive.Extension);
     Rename-Item  -LiteralPath $Archive.FullName -NewName $NewName;
 	Expand-Archive -LiteralPath $NewFullName -DestinationPath $TargetPath -Force
-    write-host '`nNewName = ' + $NewName + '`nNewFullName = ' + $NewFullName + '`nTargetPath = ' + $TargetPath
 	}
+	
 	
 # Get list of parent folders in root path
 Switch ($RenMode)

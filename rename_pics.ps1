@@ -169,7 +169,7 @@ Switch ($RenMode)
 # For each parent folder get all files recursively and move to parent, append number to file to avoid collisions
 ForEach ($Parent in $ParentFolders) {
 	ls -Path ($Parent.FullName) -Directory -Recurse | where { $_.GetFiles() -and -not $_.GetDirectories()} | ForEach-Object { $n=($Parent.FullName + '\..\' + $_.Parent.BaseName + ' - ' + $_.BaseName ); Move-Item -LiteralPath $_.FullName -Destination $n}
-    Get-ChildItem -Path ($Parent.FullName + '\*\*\') -Recurse | Where {!$_.PSIsContainer} | ForEach {
+    Get-ChildItem -Path ($Parent.FullName) -Recurse | Where {!$_.PSIsContainer} | ForEach {
         $FileInc = 1
         Do {
             If ($FileInc -eq 1) {$MovePath = Join-Path -Path $Parent.FullName -ChildPath $_.Name}

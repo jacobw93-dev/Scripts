@@ -3,7 +3,8 @@ $Host.PrivateData.ProgressBackgroundColor='Green'
 $Host.PrivateData.ProgressForegroundColor='Black'
 
 $fileTypes = @('.jpeg','.jpg','.png')
-$excludedFileTypes = @('.!qb','.part','.zip')
+$excludedFileTypes = @('.!qb','.part','.zip','.rar')
+$CompressedFileTypes = @('.zip')
 $regex_str = '[^0-9A-Za-z\.]+';
 $Date = Get-Date -format "yyyyMMdd_HHmm"
 $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
@@ -141,8 +142,8 @@ If ( $Choose -eq "1" )
 	}
 
 
-$Archives = ls -LiteralPath "$InputFolder" -Recurse -Filter *.zip ;
-$Archive_counter = (gci $InputFolder -Recurse -Filter *.zip).Count
+$Archives = ls -LiteralPath "$InputFolder" -file -Recurse | where-object {$_.extension -in $CompressedFileTypes} ;
+$Archive_counter = (gci $InputFolder -file -Recurse | where-object {$_.extension -in $CompressedFileTypes} ).Count
 $k = 0
 
 Foreach ($Archive In $Archives)
@@ -158,7 +159,6 @@ Foreach ($Archive In $Archives)
 	Expand-Archive -LiteralPath $NewFullName -DestinationPath $TargetPath -Force
 	}
 	
-	
 # Get list of parent folders in root path
 Switch ($RenMode)
 		{
@@ -166,19 +166,12 @@ Switch ($RenMode)
 			"1" {$ParentFolders = Get-ChildItem -LiteralPath $InputFolder -Directory | gci -Directory | ? { !(gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -in $excludedFileTypes}) }}
 		}
 
-# For each parent folder get all files recursively and move to parent, append number to file to avoid collisions
+# For each parent folder get all folders recursively and move to parent
 ForEach ($Parent in $ParentFolders) {
-	ls -Path ($Parent.FullName) -Directory -Recurse | where { $_.GetFiles() -and -not $_.GetDirectories()} | ForEach-Object { $n=($Parent.FullName + '\..\' + $_.Parent.BaseName + ' - ' + $_.BaseName ); Move-Item -LiteralPath $_.FullName -Destination $n}
-    Get-ChildItem -Path ($Parent.FullName) -Recurse | Where {!$_.PSIsContainer} | ForEach {
-        $FileInc = 1
-        Do {
-            If ($FileInc -eq 1) {$MovePath = Join-Path -Path $Parent.FullName -ChildPath $_.Name}
-            Else {$MovePath = Join-Path -Path $Parent.FullName -ChildPath "$($_.BaseName)($FileInc)$($_.Extension)"}
-            $FileInc++
-        }
-        While (Test-Path -Path $MovePath -PathType Leaf)
-        Move-Item -LiteralPath $_.FullName -Destination $MovePath
-    }
+	ls -LiteralPath ($Parent.FullName) -Directory -Recurse | where { $_.GetFiles() -and -not $_.GetDirectories()} | ForEach-Object {
+		$n=($Parent.Parent.FullName + '\' + $_.Parent.BaseName + ' - ' + $_.BaseName );
+		Move-Item -LiteralPath $_.FullName -Destination $n -verbose
+		}
 }
 
 ls -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories()} | Remove-Item ;

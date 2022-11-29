@@ -157,6 +157,7 @@ Foreach ($Archive In $Archives)
     $TargetPath = ($Archive.FullName -Replace [regex]::Escape($Archive.BaseName), $NewBaseName).trimend($Archive.Extension);
     Rename-Item  -LiteralPath $Archive.FullName -NewName $NewName;
 	Expand-Archive -LiteralPath $NewFullName -DestinationPath $TargetPath -Force
+	Remove-Item -LiteralPath $NewFullName
 	}
 	
 # Get list of parent folders in root path

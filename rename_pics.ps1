@@ -134,6 +134,8 @@ function Is-Numeric ($Value) {
 }
 
 $RenMode = RenameMode
+$Choose = ChangeFoldersNames
+If ( $Choose -eq "1" ) { $FolderNumerator = SetFolderNumerator }
 
 $Archives = ls -LiteralPath "$InputFolder" -file -Recurse | where-object {$_.extension -in $CompressedFileTypes} ;
 $Archive_counter = (gci $InputFolder -file -Recurse | where-object {$_.extension -in $CompressedFileTypes} ).Count
@@ -170,12 +172,9 @@ ForEach ($Parent in $ParentFolders) {
 
 ls -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories()} | Remove-Item ;
 
-$Choose = ChangeFoldersNames
 If ( $Choose -eq "1" )
 	{
-		$FolderNumerator = SetFolderNumerator
-				
-				
+		
 		Switch ($RenMode)
 		{
 			"0" {Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator}}

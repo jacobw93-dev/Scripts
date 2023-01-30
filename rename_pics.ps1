@@ -117,12 +117,14 @@ function ChangeFoldersNames
 
 function SetFolderNumerator
 {
-	$Number_from = Read-Host "`nSpecify the number from which to start numbering the directories"
+	$defaultValue = 1
+	# if ($value = Read-Host -Prompt "Please enter a value ($defaultValue)") { $value } else { $defaultValue }
+	if ($Number_from = Read-Host "`nSpecify the number from which to start numbering the directories (default: $defaultValue)") { $Number_from } else { $Number_from = $defaultValue }
 	$Number_result = Is-Numeric $Number_from
 	while ($Number_result -eq $False)
 	{
 		If ($Number_result -eq $False) {Write-Host "Enter the correct value"; pause}
-		$Number_from = Read-Host "`nSpecify the number from which to start numbering the directories"
+		if ($Number_from = Read-Host "`nSpecify the number from which to start numbering the directories (default: $defaultValue)") { $Number_from } else { $Number_from = $defaultValue }
 		$Number_result = Is-Numeric $Number_from
 	}
 	$Number_from = [int]$Number_from

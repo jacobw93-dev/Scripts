@@ -137,7 +137,6 @@ function Is-Numeric ($Value) {
 
 $RenMode = RenameMode
 $Choose = ChangeFoldersNames
-Clear-Variable -name FolderNumerator
 If ( $Choose -eq "1" ) { $FolderNumerator = SetFolderNumerator }
 
 $Archives = ls -LiteralPath "$InputFolder" -file -Recurse | where-object {$_.extension -in $CompressedFileTypes} ;

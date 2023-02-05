@@ -6,7 +6,7 @@ $fileTypes = @('.jpeg','.jpg','.png')
 $excludedFileTypes = @('.!qb','.part','.zip','.rar')
 $CompressedFileTypes = @('.zip')
 $regex_str = '[^0-9A-Za-z\.]+';
-$Date = Get-Date -format "yyyyMMdd_HHmm"
+$Date = Get-Date -format "yyyyMMdd_HHmmss"
 $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
 
 Add-Type -AssemblyName System.Windows.Forms

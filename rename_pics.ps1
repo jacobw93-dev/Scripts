@@ -118,14 +118,14 @@ function ChangeFoldersNames
 function SetFolderNumerator
 {
 	$defaultValue = 1
-	# if ($value = Read-Host -Prompt "Please enter a value ($defaultValue)") { $value } else { $defaultValue }
-	if ($Number_from = Read-Host "`nSpecify the number from which to start numbering the directories (default: $defaultValue)") { $Number_from } else { $Number_from = $defaultValue }
+	$Number_from = Read-Host "`nSpecify the number from which to start numbering the directories (default: $defaultValue)"
+	if ($Number_from -ne "") { $Number_from = $Number_from } else { $Number_from = $defaultValue }
 	$Number_result = Is-Numeric $Number_from
 	while ($Number_result -eq $False)
 	{
-		If ($Number_result -eq $False) {Write-Host "Enter the correct value"; pause}
-		if ($Number_from = Read-Host "`nSpecify the number from which to start numbering the directories (default: $defaultValue)") { $Number_from } else { $Number_from = $defaultValue }
-		$Number_result = Is-Numeric $Number_from
+		$Number_from = Read-Host "`nSpecify the number from which to start numbering the directories (default: $defaultValue)"
+	    if ($Number_from -ne "") { $Number_from = $Number_from } else { $Number_from = $defaultValue }
+	    $Number_result = Is-Numeric $Number_from
 	}
 	$Number_from = [int]$Number_from
 	return $Number_from
@@ -137,6 +137,7 @@ function Is-Numeric ($Value) {
 
 $RenMode = RenameMode
 $Choose = ChangeFoldersNames
+Clear-Variable -name FolderNumerator
 If ( $Choose -eq "1" ) { $FolderNumerator = SetFolderNumerator }
 
 $Archives = ls -LiteralPath "$InputFolder" -file -Recurse | where-object {$_.extension -in $CompressedFileTypes} ;

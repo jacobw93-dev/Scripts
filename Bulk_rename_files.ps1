@@ -20,7 +20,7 @@ $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @
  
 [void]$FolderBrowser.ShowDialog()
 $FolderBrowser.SelectedPath
-If (!(Test-Path $FolderBrowser.SelectedPath)) {New-Item $FolderBrowser.SelectedPath}
+If (!(Test-Path $FolderBrowser.SelectedPath)) {New-Item $FolderBrowser.SelectedPath -ItemType Directory}
 $output_folder = $FolderBrowser.SelectedPath;
 
 Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -name 'Hidden' -value 0

@@ -118,12 +118,12 @@ function ChangeFoldersNames
 function SetFolderNumerator
 {
 	$defaultValue = 1
-	$Number_from = Read-Host "`nSpecify -eq number from which to start numbering the directories (default - $defaultValue)"
+	$Number_from = Read-Host "`nSpecify the number from which to start numbering the directories (default: $defaultValue)"
 	if ($Number_from -eq "") { $Number_from = $defaultValue }
 	$Number_result = Is-Numeric $Number_from
 	while ($Number_result -eq $False)
 	{
-		$Number_from = Read-Host "`nSpecify the number from which to start numbering the directories (default - $defaultValue)"
+		$Number_from = Read-Host "`nSpecify the number from which to start numbering the directories (default: $defaultValue)"
 	    if ($Number_from -eq "") { $Number_from = $defaultValue }
 	    $Number_result = Is-Numeric $Number_from
 	}
@@ -161,7 +161,7 @@ Foreach ($Archive In $Archives)
 Switch ($RenMode)
 		{
 			"0" {$ParentFolders = Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -in $excludedFileTypes}) }}
-			"1" {$ParentFolders = Get-ChildItem -LiteralPath $InputFolder -Directory | gci -Directory | ? { !(gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -in $excludedFileTypes}) }}
+			"1" {$ParentFolders = Get-ChildItem -LiteralPath $InputFolder -Directory | ? { gci -LiteralPath $_.FullName -Directory | ? { !(gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -in $excludedFileTypes}) }}}
 		}
 
 # For each parent folder get all folders recursively and move to parent
@@ -180,7 +180,7 @@ If ( $Choose -eq "1" )
 		Switch ($RenMode)
 		{
 			"0" {Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator}}
-			"1" {Get-ChildItem -LiteralPath $InputFolder -Directory | gci -Directory | ? { !(gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator}}
+			"1" {Get-ChildItem -LiteralPath $InputFolder -Directory | ? { gci -LiteralPath $_.FullName -Directory | ? { !(gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -in $excludedFileTypes}) }} | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator}}
 		}
 
 	}

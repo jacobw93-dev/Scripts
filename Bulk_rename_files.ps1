@@ -3,8 +3,8 @@ $Host.UI.RawUI.WindowTitle = "Bulk_rename_files"
 Add-Type -AssemblyName System.Windows.Forms
 Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -name 'Hidden' -value 1 
 $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
-    SelectedPath = $env:USERPROFILE + '\Downloads'
-	Description = "Select source directory"
+    SelectedPath = 'D:\Downloads\Torrents'
+	Description = "Wybierz katalog zrodlowy"
 }
  
 [void]$FolderBrowser.ShowDialog()
@@ -14,8 +14,8 @@ $source_folder = $FolderBrowser.SelectedPath;
 
 Add-Type -AssemblyName System.Windows.Forms
 $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
-    SelectedPath = $env:USERPROFILE + '\Videos\'
-	Description = "Select target directory"
+    SelectedPath = 'D:\Downloads\Videos'
+	Description = "Wybierz katalog docelowy"
 }
  
 [void]$FolderBrowser.ShowDialog()
@@ -25,7 +25,7 @@ $output_folder = $FolderBrowser.SelectedPath;
 
 Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -name 'Hidden' -value 0
 
-# $input_ext = Read-Host -Prompt "`nSpecify the extension name for the files to be processed, e.g. 'mp4'`n";
+# $input_ext = Read-Host -Prompt "`nPodaj nazwe rozszerzenia dla plikow do przetworzenia, np. 'mp4'`n";
 #$ext = '.' + $input_ext;
 #$file_filter = '*' + $ext;
 $fileTypes = @('.mp4','.mov','.mkv','.wmv')
@@ -33,9 +33,9 @@ $excludedFileTypes = @('.!qb','.part')
 $dir_filter = "";
 while ($dir_filter -eq "")
 {
-$dir_filter = Read-Host -Prompt "`nSpecify the mask for the directories to be processed `n";
+$dir_filter = Read-Host -Prompt "`nPodaj maske dla katalogow do przetworzenia `n";
 $dir_filter = $dir_filter.Trim();
-If ($dir_filter -eq "") {Write-Host "Enter correct value"; pause}
+If ($dir_filter -eq "") {Write-Host "Wprowadz prawidlowa wartosc"; pause}
 }
 $dir_filter = '*' + $dir_filter + '*';
 $regex_str1 = '[^0-9A-Za-z\.]';
@@ -43,8 +43,9 @@ $regex_str2 = '\.+';
 $regex_str3 = '(\d{3,4}p).*'
 
 cd $source_folder
-dir . -Directory -filter $dir_filter | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | move-item -Destination $output_folder;
-cd $output_folder    
+If (!(Test-Path ($output_folder + "\temp"))) {New-Item ($output_folder + "\temp") -ItemType Directory}
+dir . -Directory -filter $dir_filter | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | move-item -Destination ($output_folder + "\temp") -Verbose;
+cd ($output_folder + "\temp")
 
 $filesandfolders = Get-ChildItem -recurse | Where-Object { $_.name -match $regex_str1} 
 $filesandfolders | Where-Object {$_.PsIscontainer}  |  foreach {
@@ -94,7 +95,10 @@ Foreach ($dir In $Folder)
 
 dir -Recurse -Directory -filter $dir_filter | dir -Recurse -File | where-object {$_.extension -notin $fileTypes} | Remove-Item;
 ls -Directory -filter $dir_filter -recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories()} | Remove-Item;
+dir . -Directory -filter $dir_filter | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | move-item -Destination $output_folder -Verbose;
 
+cd $output_folder
+remove-item ($output_folder + "\temp")
 start . ;
 cd $PSScriptRoot
 # exit

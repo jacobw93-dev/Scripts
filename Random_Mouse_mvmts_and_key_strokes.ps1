@@ -38,29 +38,32 @@ keybd_event(keyCode, 0, KEYEVENTF_KEYUP, 0);
 }
 }
 "@
+
 function GenerateRandomMovement
-{
-$maxMouseDelta = 50 # Maksymalna odległość o jaką poruszy się myszka (w pikselach)
-$maxKeyPresses = 10 # Maksymalna liczba naciśnięć klawisza
-$random = New-Object System.Random
-# Generowanie losowego ruchu myszką
-$xDelta = $random.Next(-$maxMouseDelta, $maxMouseDelta + 1)
-$yDelta = $random.Next(-$maxMouseDelta, $maxMouseDelta + 1)
-[UserInput]::MoveMouse($xDelta, $yDelta)
-# Losowe naciśnięcia klawiszy
-$numKeyPresses = $random.Next(1, $maxKeyPresses + 1)
-for ($i = 0; $i -lt $numKeyPresses; $i++)
-{
-$keyCode = $random.Next(65, 91) # Generowanie losowego kodu klawisza A-Z (ASCII 65-90)
-[UserInput]::PressKey($keyCode)
-}
-}
+	{
+	$maxMouseDelta = 50 # Maksymalna odległość o jaką poruszy się myszka (w pikselach)
+	$maxKeyPresses = 10 # Maksymalna liczba naciśnięć klawisza
+	$random = New-Object System.Random
+	# Generowanie losowego ruchu myszką
+	$xDelta = $random.Next(-$maxMouseDelta, $maxMouseDelta + 1)
+	$yDelta = $random.Next(-$maxMouseDelta, $maxMouseDelta + 1)
+	[UserInput]::MoveMouse($xDelta, $yDelta)
+	# Losowe naciśnięcia klawiszy
+	$numKeyPresses = $random.Next(1, $maxKeyPresses + 1)
+	for ($i = 0; $i -lt $numKeyPresses; $i++)
+		{
+		$keyCode = $random.Next(65, 91) # Generowanie losowego kodu klawisza A-Z (ASCII 65-90)
+		[UserInput]::PressKey($keyCode)
+		}
+	}
+
 # Wygenerowanie ruchu co 5 sekund
 while ($true)
-{
-GenerateRandomMovement
-Start-Sleep -Seconds 5
-}
+	{
+	GenerateRandomMovement
+	Start-Sleep -Seconds 5
+	}
+
 Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
@@ -101,26 +104,28 @@ keybd_event(keyCode, 0, KEYEVENTF_KEYUP, 0);
 }
 }
 "@
+
 function GenerateRandomMovement
-{
-$maxMouseDelta = 50 # Maksymalna odległość o jaką poruszy się myszka (w pikselach)
-$maxKeyPresses = 10 # Maksymalna liczba naciśnięć klawisza
-$random = New-Object System.Random
-# Generowanie losowego ruchu myszką
-$xDelta = $random.Next(-$maxMouseDelta, $maxMouseDelta + 1)
-$yDelta = $random.Next(-$maxMouseDelta, $maxMouseDelta + 1)
-[UserInput]::MoveMouse($xDelta, $yDelta)
-# Losowe naciśnięcia klawiszy
-$numKeyPresses = $random.Next(1, $maxKeyPresses + 1)
-for ($i = 0; $i -lt $numKeyPresses; $i++)
-{
-$keyCode = $random.Next(65, 91) # Generowanie losowego kodu klawisza A-Z (ASCII 65-90)
-[UserInput]::PressKey($keyCode)
-}
-}
+	{
+	$maxMouseDelta = 50 # Maksymalna odległość o jaką poruszy się myszka (w pikselach)
+	$maxKeyPresses = 10 # Maksymalna liczba naciśnięć klawisza
+	$random = New-Object System.Random
+	# Generowanie losowego ruchu myszką
+	$xDelta = $random.Next(-$maxMouseDelta, $maxMouseDelta + 1)
+	$yDelta = $random.Next(-$maxMouseDelta, $maxMouseDelta + 1)
+	[UserInput]::MoveMouse($xDelta, $yDelta)
+	# Losowe naciśnięcia klawiszy
+	$numKeyPresses = $random.Next(1, $maxKeyPresses + 1)
+	for ($i = 0; $i -lt $numKeyPresses; $i++)
+		{
+		$keyCode = $random.Next(65, 91) # Generowanie losowego kodu klawisza A-Z (ASCII 65-90)
+		[UserInput]::PressKey($keyCode)
+		}
+	}
+
 # Wygenerowanie ruchu co 5 sekund
 while ($true)
-{
-GenerateRandomMovement
-Start-Sleep -Seconds 5
-}
+	{
+	GenerateRandomMovement
+	Start-Sleep -Seconds 5
+	}

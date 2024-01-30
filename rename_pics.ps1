@@ -97,6 +97,22 @@ function RenameFilesRecursive {
     }
 }
 #>
+function ExtractArchivesOnly
+{
+	$answer = $null
+	while (@("y","n") -notcontains $answer)
+	{
+		$answer = Read-Host "`nShould I extract archives only? Y (Yes), N (No)"
+		$answer = $answer.ToLower().Trim();
+		Switch ($answer)
+		{
+			y {$Chosen = "1"}
+			n {$Chosen = "0"}
+		}
+		If (@("y","n") -notcontains $answer) {Write-Host "Enter the correct value"; pause}
+    }
+	return $Chosen
+}
 
 function ChangeFoldersNames
 {
@@ -135,27 +151,34 @@ function Is-Numeric ($Value) {
     return $Value -match "^[\d\.]+$"
 }
 
+function ExtractArchives
+{
+	$Archives = ls -LiteralPath "$InputFolder" -file -Recurse | where-object {$_.extension -in $CompressedFileTypes} ;
+	$Archive_counter = (gci $InputFolder -file -Recurse | where-object {$_.extension -in $CompressedFileTypes} ).Count
+	$k = 0
+
+	Foreach ($Archive In $Archives)
+		{
+		$k++
+		$percent_Archive = [math]::Round($k / $Archive_counter * 100)
+		Write-Progress -Id 1  -activity "Total Progress Bar" -CurrentOperation "Current file: '$Archive'" -Status "Processing $k of $Archive_counter ($percent_Archive%)"  -PercentComplete $percent_Archive
+		$NewName = ($Archive.Name -Replace $regex_str,".");
+		$NewBaseName = ($Archive.Name -Replace $regex_str,".");
+		$NewFullName = ($Archive.FullName -Replace [regex]::Escape($Archive.Name), $NewName);
+		$TargetPath = ($Archive.FullName -Replace [regex]::Escape($Archive.BaseName), $NewBaseName).trimend($Archive.Extension);
+		Rename-Item  -LiteralPath $Archive.FullName -NewName $NewName;
+		Expand-Archive -LiteralPath $NewFullName -DestinationPath $TargetPath -Force
+		Remove-Item -LiteralPath $NewFullName
+		}
+}
+
+$ArchivesOnly = ExtractArchivesOnly
+If ( $ArchivesOnly -eq "1" ) {ExtractArchives; start . ; exit}
+
 $RenMode = RenameMode
 $Choose = ChangeFoldersNames
 If ( $Choose -eq "1" ) { $FolderNumerator = SetFolderNumerator }
-
-$Archives = ls -LiteralPath "$InputFolder" -file -Recurse | where-object {$_.extension -in $CompressedFileTypes} ;
-$Archive_counter = (gci $InputFolder -file -Recurse | where-object {$_.extension -in $CompressedFileTypes} ).Count
-$k = 0
-
-Foreach ($Archive In $Archives)
-    {
-	$k++
-	$percent_Archive = [math]::Round($k / $Archive_counter * 100)
-	Write-Progress -Id 1  -activity "Total Progress Bar" -CurrentOperation "Current file: '$Archive'" -Status "Processing $k of $Archive_counter ($percent_Archive%)"  -PercentComplete $percent_Archive
-	$NewName = ($Archive.Name -Replace $regex_str,".");
-    $NewBaseName = ($Archive.Name -Replace $regex_str,".");
-    $NewFullName = ($Archive.FullName -Replace [regex]::Escape($Archive.Name), $NewName);
-    $TargetPath = ($Archive.FullName -Replace [regex]::Escape($Archive.BaseName), $NewBaseName).trimend($Archive.Extension);
-    Rename-Item  -LiteralPath $Archive.FullName -NewName $NewName;
-	Expand-Archive -LiteralPath $NewFullName -DestinationPath $TargetPath -Force
-	Remove-Item -LiteralPath $NewFullName
-	}
+ExtractArchives
 	
 # Get list of parent folders in root path
 Switch ($RenMode)

@@ -172,13 +172,15 @@ function ExtractArchives
 		}
 }
 
-$ArchivesOnly = ExtractArchivesOnly
-If ( $ArchivesOnly -eq "1" ) {ExtractArchives; start . ; exit}
-
+$Archive_counter = (gci $InputFolder -file -Recurse | where-object {$_.extension -in $CompressedFileTypes} ).Count
+If ( $Archive_counter -ge 1 ) {
+	$ArchivesOnly = ExtractArchivesOnly
+	If ( $ArchivesOnly -eq "1" ) {ExtractArchives; start . ; exit}
+}
 $RenMode = RenameMode
 $Choose = ChangeFoldersNames
 If ( $Choose -eq "1" ) { $FolderNumerator = SetFolderNumerator }
-ExtractArchives
+If ( $Archive_counter -ge 1 ) {ExtractArchives}
 	
 # Get list of parent folders in root path
 Switch ($RenMode)

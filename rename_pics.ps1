@@ -19,9 +19,16 @@ $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @
 	Description = "Select a directory containing images"
 }
 
-[void]$FolderBrowser.ShowDialog()
-$FolderBrowser.SelectedPath
-$InputFolder = $FolderBrowser.SelectedPath;
+
+if ($FolderBrowser.ShowDialog() -eq 'OK') {
+    $InputFolder = $FolderBrowser.SelectedPath
+    Write-Host "Selected folder: $InputFolder"
+} else {
+    Write-Host "User cancelled the operation."
+	Pause
+	Exit
+}
+
 Set-ItemProperty $key Hidden 0
 Set-ItemProperty $key ShowSuperHidden 0
 #Stop-Process -processname explorer

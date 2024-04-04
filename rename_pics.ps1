@@ -81,29 +81,6 @@ function RenameFolderAndSubFolders {
     }
 }
 
-<# Currently not being used
-
-function RenameFilesRecursive {
-  param($item, $number)
-  $Files = Get-ChildItem -LiteralPath $item.FullName -File -Recurse
-
-  foreach ($file in $Files) {
-    RenameFilesRecursive $file 1
-  }
-
-  while ($true){
-        try {
-			Write-Output "Renaming: $($item.FullName)"
-			$NewName = $item.Parent.Name + '-' + ($number.ToString().PadLeft(3,'0')) + '.' + $item.extension
-			$NewName = ($NewName -Replace $regex_str,".");
-            Rename-Item -LiteralPath $item.FullName -NewName $NewName -ErrorAction Stop;
-            return
-        }
-        catch {}
-        $number++
-    }
-}
-#>
 function ExtractArchivesOnly
 {
 	$answer = $null
@@ -211,8 +188,8 @@ If ( $Choose -eq "1" )
 		
 		Switch ($RenMode)
 		{
-			"0" {Get-ChildItem -LiteralPath $InputFolder -Directory -Name -Recurse | Where-Object { ($_ -split '[/\\]').Count -eq 1 } | Get-Item -LiteralPath { "$InputFolder\$_" }  | ? { (gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -notin $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator}}
-			"1" {Get-ChildItem -LiteralPath $InputFolder -Directory -Name -Recurse | Where-Object { ($_ -split '[/\\]').Count -eq 2 } | Get-Item -LiteralPath { "$InputFolder\$_" }  | ? { (gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -notin $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator}}
+			"0" {$ParentFolders | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator}}
+			"1" {$ParentFolders | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator}}
 		}
 
 	}

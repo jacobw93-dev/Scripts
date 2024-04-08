@@ -1,5 +1,5 @@
 $Host.UI.RawUI.WindowTitle = "Batch rename images"
-$Host.PrivateData.ProgressBackgroundColor = 'Green'
+$Host.PrivateData.ProgressBackgroundColor = 'Red'
 $Host.PrivateData.ProgressForegroundColor = 'Black'
 
 $fileTypes = @('.jpeg', '.jpg', '.png')
@@ -60,7 +60,7 @@ function RenameMode {
 
 function RenameFolderAndSubFolders {
 	param($item, $number)
-	$subfolders = Get-ChildItem -LiteralPath $item.FullName -Directory
+	$subfolders = Get-ChildItem -LiteralPath $item.FullName -Directory -Force -ErrorAction Continue
   
 	$myChangeLog = [System.Collections.Generic.List[object]]::new()
 
@@ -71,7 +71,7 @@ function RenameFolderAndSubFolders {
 		try {
 			$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 			$NewName = $item.Parent.Name + ' - Set ' + ($number.ToString().PadLeft(3, '0'))
-			Rename-Item -LiteralPath $item.FullName -NewName $NewName -Verbose -ErrorAction Stop
+			Rename-Item -LiteralPath $item.FullName -NewName $NewName -ErrorAction Stop
 			$logEntry = $("$Current_timestamp;'{0}';'{1}' " -f $item.FullName, $NewName)
 			$myChangeLog.Add($logEntry) | Out-Null
 			return
@@ -229,5 +229,3 @@ Foreach ($dir In $Folder) {
 $myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 
 ls -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item ;
-
-explorer . ;

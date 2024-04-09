@@ -1,6 +1,6 @@
 $Host.UI.RawUI.WindowTitle = "Batch rename images"
-$Host.PrivateData.ProgressBackgroundColor = 'Red'
-$Host.PrivateData.ProgressForegroundColor = 'Black'
+#$Host.PrivateData.ProgressBackgroundColor = 'Red'
+#$Host.PrivateData.ProgressForegroundColor = 'Black'
 
 $fileTypes = @('.jpeg', '.jpg', '.png')
 $excludedFileTypes = @('.!qb', '.part', '.zip', '.rar')
@@ -40,7 +40,7 @@ cd -LiteralPath "$InputFolder" ;
 Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object { $_.extension -in $excludedFileTypes }) } | gci -File -Recurse | where-Object { $_.extension -notin $fileTypes } | Remove-Item ;
 
 
-ls -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item ;
+ls  $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item ;
 
 # determine whether to rename subfolders of the previously specified $InputFolder directory. In case of option [1] the script should rename the folders inside the given folder, otherwise [2] only their subfolders.
 
@@ -60,7 +60,7 @@ function RenameMode {
 
 function RenameFolderAndSubFolders {
 	param($item, $number)
-	$subfolders = Get-ChildItem -LiteralPath $item.FullName -Directory -Force -ErrorAction Continue
+	$subfolders = Get-ChildItem -LiteralPath $item.FullName -Directory -Force
   
 	$myChangeLog = [System.Collections.Generic.List[object]]::new()
 
@@ -172,13 +172,13 @@ ForEach ($Parent in $ParentFolders) {
 	}
 }
 
-ls -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item ;
+ls  $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item ;
 
 If ( $Choose -eq "1" ) {
 		
 	Switch ($RenMode) {
-		"0" { $ParentFolders | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator } }
-		"1" { $ParentFolders | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator } }
+		"0" { Get-ChildItem -LiteralPath $InputFolder -Directory -Name -Recurse | Where-Object { ($_ -split '[/\\]').Count -eq 1 } | Get-Item -LiteralPath { "$InputFolder\$_" } | ? { (gci -LiteralPath $_.FullName -file -recurse | where-object { $_.extension -notin $excludedFileTypes }) }  | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator } }
+		"1" { Get-ChildItem -LiteralPath $InputFolder -Directory -Name -Recurse | Where-Object { ($_ -split '[/\\]').Count -eq 1 } | Get-Item -LiteralPath { "$InputFolder\$_" } | ? { (gci -LiteralPath $_.FullName -file -recurse | where-object { $_.extension -notin $excludedFileTypes }) }  | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator } }
 	}
 
 }
@@ -228,4 +228,4 @@ Foreach ($dir In $Folder) {
 
 $myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 
-ls -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item ;
+ls $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item ;

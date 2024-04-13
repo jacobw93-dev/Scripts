@@ -1,6 +1,6 @@
 $Host.UI.RawUI.WindowTitle = "Batch rename images"
-#$Host.PrivateData.ProgressBackgroundColor = 'Red'
-#$Host.PrivateData.ProgressForegroundColor = 'Black'
+$Host.PrivateData.ProgressBackgroundColor = 'Red'
+$Host.PrivateData.ProgressForegroundColor = 'Black'
 
 $fileTypes = @('.jpeg', '.jpg', '.png')
 $excludedFileTypes = @('.!qb', '.part', '.zip', '.rar')
@@ -34,13 +34,6 @@ Set-ItemProperty $key Hidden 0
 Set-ItemProperty $key ShowSuperHidden 0
 #Stop-Process -processname explorer
 $changelog_FullName = "$InputFolder" + '\' + "changelog_" + ((Get-Item -Path $InputFolder).BaseName -Replace $regex_str, "_") + "_" + $Date + ".txt"
-
-
-cd -LiteralPath "$InputFolder" ;
-Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object { $_.extension -in $excludedFileTypes }) } | gci -File -Recurse | where-Object { $_.extension -notin $fileTypes } | Remove-Item ;
-
-
-ls  $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item ;
 
 # determine whether to rename subfolders of the previously specified $InputFolder directory. In case of option [1] the script should rename the folders inside the given folder, otherwise [2] only their subfolders.
 
@@ -123,13 +116,22 @@ function ExtractArchives {
 	}
 }
 
+$RenMode = RenameMode
+$Choose = ChangeFoldersNames
+
+# Start time
+$startTime = Get-Date
+
+cd -LiteralPath "$InputFolder" ;
+Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object { $_.extension -in $excludedFileTypes }) } | gci -File -Recurse | where-Object { $_.extension -notin $fileTypes } | Remove-Item ;
+ls  $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item ;
+
 $Archive_counter = (gci $InputFolder -file -Recurse | where-object { $_.extension -in $CompressedFileTypes } ).Count
 If ( $Archive_counter -ge 1 ) {
 	$ArchivesOnly = ExtractArchivesOnly
-	If ( $ArchivesOnly -eq "1" ) { ExtractArchives; start . ; exit }
+	If ( $ArchivesOnly -eq "1" ) { ExtractArchives; goto end }
 }
-$RenMode = RenameMode
-$Choose = ChangeFoldersNames
+
 If ( $Choose -eq "1" ) { $FolderNumerator = SetFolderNumerator }
 If ( $Archive_counter -ge 1 ) { ExtractArchives }
 	
@@ -228,3 +230,22 @@ Foreach ($dir In $Folder) {
 $myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 
 ls $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item ;
+
+:end
+
+# End time
+$endTime = Get-Date
+
+# Calculate process time
+$processTime = $endTime - $startTime
+
+# Format process time
+$processTimeFormatted = '{0:hh\:mm\:ss}' -f $processTime
+
+Clear
+# Write process time to console
+Write-Host "Process time: $processTimeFormatted (hh:mm:ss)"
+
+"`nProcess time: $processTimeFormatted" | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
+
+pause

@@ -162,12 +162,13 @@ If ( $Choose -eq "1" )
 
 $myChangeLog = [System.Collections.Generic.List[object]]::new()
 $number = $FolderNumerator
-
+$folder_counter = ($ParentFolders).Count
+$PaddingLength = $folder_counter.ToString().Length
 foreach ($folder in $ParentFolders) {
 	if ( ($previousfolder.Parent.FullName) -ne ($folder.Parent.FullName) ) {$number = $FolderNumerator}
 	try {
 		$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
-		$NewName = $folder.Parent.Name + ' - Set ' + ($number.ToString().PadLeft(3, '0'))
+		$NewName = $folder.Parent.Name + ' - Set ' + ($number.ToString().PadLeft($PaddingLength, '0'))
 		Rename-Item -LiteralPath $folder.FullName -NewName $NewName -ErrorAction Stop -Verbose
 		$logEntry = $("$Current_timestamp;'{0}';'{1}' " -f $folder.FullName, $NewName)
 		$myChangeLog.Add($logEntry) | Out-Null
@@ -179,7 +180,7 @@ foreach ($folder in $ParentFolders) {
 	
 $myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 	
-$Folder = dir -LiteralPath . -Recurse -Directory | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) } ;
+$Folder = dir -LiteralPath . -Recurse -Directory | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } ;
 $folder_counter = (dir -LiteralPath . -Recurse -Directory).Count
 $k = 0
 $file_counter = (Get-ChildItem -Recurse -Directory -LiteralPath "$InputFolder" | Get-ChildItem -File | where-object { $_.extension -in $fileTypes }).Count
@@ -199,6 +200,8 @@ Foreach ($dir In $Folder) {
 	$newdir = $dir.name
 	# Search for the files set in the filter
 	$files = Get-ChildItem -LiteralPath $dir.fullname -File | where-object { $_.extension -in $fileTypes } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) }
+	$files_counter = ($files).Count
+	$PaddingLength = $files_counter.ToString().Length
 	Foreach ($file In $files) {
 		$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 		$extension = $file.Extension
@@ -207,7 +210,7 @@ Foreach ($dir In $Folder) {
 			$l++
 			$percent_file = [math]::Round($l / $file_counter * 100)
 			Write-Progress -Id 2  -activity "Total Progress Bar" -CurrentOperation "Current file: '$file'" -Status "Processing $l of $file_counter ($percent_file%)"  -PercentComplete $percent_file
-			$replace = $newdir + "_" + $zero + ($counter.ToString().PadLeft(3, '0')) + "." + $extension
+			$replace = $newdir + "_" + $zero + ($counter.ToString().PadLeft($PaddingLength, '0')) + "." + $extension
 			# Trim spaces and rename the file
 			$image_string = $file.fullname.ToString().Trim()
 			#"$split[0] renamed to $replace"

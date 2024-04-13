@@ -58,31 +58,6 @@ function RenameMode {
 	return $RenMode
 }
 
-function RenameFolderAndSubFolders {
-	param($item, $number)
-	$subfolders = Get-ChildItem -LiteralPath $item.FullName -Directory
-  
-	$myChangeLog = [System.Collections.Generic.List[object]]::new()
-
-	foreach ($folder in $subfolders) {
-		RenameFolderAndSubFolders $folder $number
-	}
-	while ($true) {
-		try {
-			$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
-			$NewName = $item.Parent.Name + ' - Set ' + ($number.ToString().PadLeft(3, '0'))
-			Rename-Item -LiteralPath $item.FullName -NewName $NewName -ErrorAction Stop
-			$logEntry = $("$Current_timestamp;'{0}';'{1}' " -f $item.FullName, $NewName)
-			$myChangeLog.Add($logEntry) | Out-Null
-			return
-		}
-		catch {}
-		$number++
-	}
-
-	$myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
-}
-
 function ExtractArchivesOnly {
 	$answer = $null
 	while (@("y", "n") -notcontains $answer) {
@@ -179,12 +154,31 @@ If ( $Choose -eq "1" )
 		
 		Switch ($RenMode)
 		{
-			"0" {Get-ChildItem -LiteralPath $InputFolder -Directory -Name -Recurse | Where-Object { ($_ -split '[/\\]').Count -eq 1 } | Get-Item -LiteralPath { "$InputFolder\$_" }  | ? { (gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -notin $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator}}
-			"1" {Get-ChildItem -LiteralPath $InputFolder -Directory -Name -Recurse | Where-Object { ($_ -split '[/\\]').Count -eq 2 } | Get-Item -LiteralPath { "$InputFolder\$_" }  | ? { (gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -notin $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } | % { RenameFolderAndSubFolders -item $_ -number $FolderNumerator}}
+			"0" { $ParentFolders = Get-ChildItem -LiteralPath $InputFolder -Directory -Name -Recurse | Where-Object { ($_ -split '[/\\]').Count -eq 1 } | Get-Item -LiteralPath { "$InputFolder\$_" }  | ? { (gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -notin $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } }
+			"1" { $ParentFolders = Get-ChildItem -LiteralPath $InputFolder -Directory -Name -Recurse | Where-Object { ($_ -split '[/\\]').Count -eq 2 } | Get-Item -LiteralPath { "$InputFolder\$_" }  | ? { (gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -notin $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } }
 		}
 
 	}
 
+$myChangeLog = [System.Collections.Generic.List[object]]::new()
+$number = $FolderNumerator
+
+foreach ($folder in $ParentFolders) {
+	if ( ($previousfolder.Parent.FullName) -ne ($folder.Parent.FullName) ) {$number = $FolderNumerator}
+	try {
+		$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
+		$NewName = $folder.Parent.Name + ' - Set ' + ($number.ToString().PadLeft(3, '0'))
+		Rename-Item -LiteralPath $folder.FullName -NewName $NewName -ErrorAction Stop -Verbose
+		$logEntry = $("$Current_timestamp;'{0}';'{1}' " -f $folder.FullName, $NewName)
+		$myChangeLog.Add($logEntry) | Out-Null
+	}
+	catch {}
+	$number++
+	$previousfolder = $folder
+}
+	
+$myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
+	
 $Folder = dir -LiteralPath . -Recurse -Directory | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) } ;
 $folder_counter = (dir -LiteralPath . -Recurse -Directory).Count
 $k = 0

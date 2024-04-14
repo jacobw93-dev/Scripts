@@ -116,6 +116,12 @@ function ExtractArchives {
 	}
 }
 
+$Archive_counter = (gci $InputFolder -file -Recurse | where-object { $_.extension -in $CompressedFileTypes } ).Count
+If ( $Archive_counter -ge 1 ) {
+	$ArchivesOnly = ExtractArchivesOnly
+	If ( $ArchivesOnly -eq "1" ) { $startTime = Get-Date ; ExtractArchives; goto end }
+}
+
 $RenMode = RenameMode
 $Choose = ChangeFoldersNames
 
@@ -126,11 +132,6 @@ cd -LiteralPath "$InputFolder" ;
 Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object { $_.extension -in $excludedFileTypes }) } | gci -File -Recurse | where-Object { $_.extension -notin $fileTypes } | Remove-Item ;
 ls  $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item ;
 
-$Archive_counter = (gci $InputFolder -file -Recurse | where-object { $_.extension -in $CompressedFileTypes } ).Count
-If ( $Archive_counter -ge 1 ) {
-	$ArchivesOnly = ExtractArchivesOnly
-	If ( $ArchivesOnly -eq "1" ) { ExtractArchives; goto end }
-}
 
 If ( $Choose -eq "1" ) { $FolderNumerator = SetFolderNumerator }
 If ( $Archive_counter -ge 1 ) { ExtractArchives }

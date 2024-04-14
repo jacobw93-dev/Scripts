@@ -119,7 +119,16 @@ function ExtractArchives {
 $Archive_counter = (gci $InputFolder -file -Recurse | where-object { $_.extension -in $CompressedFileTypes } ).Count
 If ( $Archive_counter -ge 1 ) {
 	$ArchivesOnly = ExtractArchivesOnly
-	If ( $ArchivesOnly -eq "1" ) { $startTime = Get-Date ; ExtractArchives; goto end }
+	If ( $ArchivesOnly -eq "1" ) {
+		$startTime = Get-Date
+		ExtractArchives
+		$endTime = Get-Date
+		$processTime = $endTime - $startTime
+		$processTimeFormatted = '{0:hh\:mm\:ss}' -f $processTime
+		Write-Host "Process time: $processTimeFormatted (hh:mm:ss)"
+		pause
+		exit
+	}
 }
 
 $RenMode = RenameMode
@@ -189,7 +198,6 @@ $k = 0
 $file_counter = (Get-ChildItem -Recurse -Directory -LiteralPath "$InputFolder" | Get-ChildItem -File | where-object { $_.extension -in $fileTypes }).Count
 $l = 0
 
-
 $myChangeLog = [System.Collections.Generic.List[object]]::new()
   
 Foreach ($dir In $Folder) {
@@ -232,8 +240,6 @@ $myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 
 ls $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item ;
 
-:end
-
 # End time
 $endTime = Get-Date
 
@@ -244,9 +250,10 @@ $processTime = $endTime - $startTime
 $processTimeFormatted = '{0:hh\:mm\:ss}' -f $processTime
 
 Clear
+
 # Write process time to console
 Write-Host "Process time: $processTimeFormatted (hh:mm:ss)"
 
-"`nProcess time: $processTimeFormatted" | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
+"`nProcess time: $processTimeFormatted  (hh:mm:ss)" | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 
 pause

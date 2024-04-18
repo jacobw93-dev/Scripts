@@ -59,6 +59,21 @@
 			.descending::after {
 				content: ' ▼';
 			}
+			.search-container {
+				margin: 10px 0; /* Add margin for spacing */
+				border: 2px solid #ccc;
+				border-radius: 5px;
+				overflow: hidden; /* Hide overflow to prevent horizontal scroll */
+			}
+
+			.search-container input[type=text] {
+				width: 100%;
+				box-sizing: border-box;
+				border: none;
+				outline: none;
+				padding: 5px;
+				font-size: 16px;
+			}
 		</style>
 	</head>
 <body id="bg" style="color:white;text-shadow: 1px 1px #000000;">
@@ -82,8 +97,16 @@
 <br>
 <p align="center">
 <img src="Folders_disk_usage_report_order_by_name.jpg"/>
-<br>
-<br>
+</p>
+
+<br><br>
+
+<div class="container">
+<div class="search-container">
+    <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search for names...">
+</div>
+</div>
+
 <br>
 	<table id="data-table" border="1" cellpadding="2" align="center">
 		<tr>
@@ -7699,6 +7722,7 @@
 <br>
 	
 <script>
+
     let sortColumn = 1; // Initially sorting by "Nazwa" column
     let ascending = false;
 
@@ -7812,6 +7836,31 @@
     function markHeader(col) {
         const headers = document.getElementsByClassName("sortable");
         headers[col].style.backgroundColor = "darkred";
+    }
+	function searchTable() {
+        var input, filter, table, tr, td, i, j, txtValue;
+        input = document.getElementById("searchInput");
+        filter = input.value.toUpperCase();
+        table = document.getElementById("data-table");
+        tr = table.getElementsByTagName("tr");
+        for (i = 1; i < tr.length; i++) { // Start loop from index 1 to skip header row
+            td = tr[i].getElementsByTagName("td");
+            let rowVisible = false;
+            for (j = 0; j < td.length; j++) {
+                if (td[j]) {
+                    txtValue = td[j].textContent || td[j].innerText;
+                    if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                        rowVisible = true;
+                        break;
+                    }
+                }
+            }
+            if (rowVisible) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
+        }
     }
 
 </script>

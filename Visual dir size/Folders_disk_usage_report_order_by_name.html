@@ -7696,10 +7696,11 @@
 			<td align="right">0,1 %</td>
 		</tr>
 	</TABLE>
-	<br>
+<br>
+	
 <script>
-    let sortColumn = -1;
-    let ascending = true;
+    let sortColumn = 1; // Initially sorting by "Nazwa" column
+    let ascending = false;
 
     function generate() {
         const deg = 90;
@@ -7710,14 +7711,16 @@
 
     window.onload = function() {
         generate();
-        sortTable(1); // Sort by "Nazwa" column on page load
+        sortTable(sortColumn); // Sort by initial sorted column on page load
         markHeader(0); // Mark the first column header with dark red background
     };
 
     function createHex() {
         let hexCode = '';
         const hexValues = '0123456789abcdef';
-        for (let i = 0; i < 3; i++) { const brightness=Math.floor(Math.random() * 64) + 48; hexCode +=hexValues.charAt(brightness>> 4);
+        for (let i = 0; i < 3; i++) {
+            const brightness = Math.floor(Math.random() * 64) + 48;
+            hexCode += hexValues.charAt(brightness >> 4);
             hexCode += hexValues.charAt(brightness & 0x0F);
         }
         return hexCode;
@@ -7728,6 +7731,25 @@
 
         const table = document.getElementById("data-table");
         const rows = Array.from(table.rows).slice(1); // Exclude header row
+
+        // Reset background color for previously sorted column
+        if (sortColumn !== -1) {
+            rows.forEach(row => {
+                row.cells[sortColumn].style.backgroundColor = '';
+            });
+        }
+
+        // Change background color for sorted column with opacity
+        rows.forEach(row => {
+            row.cells[col].style.backgroundColor = "rgba(0, 128, 0, 0.3)"; // Green background color with opacity for sorted column
+        });
+
+        // Check if the same column is clicked
+        if (sortColumn === col) {
+            ascending = !ascending; // Toggle between ascending and descending
+        } else {
+            ascending = col; //=== 1; // Set ascending for "Nazwa" column, otherwise descending
+        }
 
         rows.sort((a, b) => {
             let aValue, bValue;
@@ -7753,43 +7775,46 @@
         // Fill out the first column with the row number
         rows.forEach((row, index) => {
             row.cells[0].textContent = index + 1;
+            row.cells[0].style.backgroundColor = 'rgba(255, 0, 0, 0.3)'; // Change background color of LP column
         });
 
         rows.forEach(row => table.appendChild(row));
 
-        if (sortColumn !== -1) {
-            const headers = document.getElementsByClassName("sortable");
-            headers[sortColumn].classList.remove("sorted", "ascending", "descending");
+        const headers = document.getElementsByClassName("sortable");
+        // Reset sorting classes for all headers
+        for (let i = 0; i < headers.length; i++) {
+            headers[i].classList.remove("sorted", "ascending", "descending");
         }
 
+        // Mark the clicked header as sorted
         const clickedHeader = document.getElementsByClassName("sortable")[col];
         clickedHeader.classList.add("sorted", ascending ? "ascending" : "descending");
 
         sortColumn = col;
-        ascending = !ascending;
     }
 
-	function parseNumericValue(value) {
-		return parseFloat(value.trim().replace(/[^\d.-]/g, '')) || 0;
-	}
+    function parseNumericValue(value) {
+        return parseFloat(value.replace(/[^\d.-]/g, '')) || 0;
+    }
 
     function parseSize(size) {
-		const [valueWithSpaces, unit] = size.trim().split(' ');
-		const value = valueWithSpaces.replace(/\s/g, ''); // Remove spaces
-		if (unit === 'G') {
-			return parseFloat(value) * 1000; // Convert GigaBytes to MegaBytes
-		} else if (unit === 'M') {
-			return parseFloat(value);
-		} else {
-			return 0;
-		}
-	}
-
+        const [valueWithSpaces, unit] = size.trim().split(' ');
+        const value = valueWithSpaces.replace(/,/g, '.').replace(/\s/g, ''); // Remove spaces and replace commas with dots
+        if (unit === 'G') {
+            return parseFloat(value) * 1000; // Convert GigaBytes to MegaBytes
+        } else if (unit === 'M') {
+            return parseFloat(value);
+        } else {
+            return 0;
+        }
+    }
 
     function markHeader(col) {
         const headers = document.getElementsByClassName("sortable");
         headers[col].style.backgroundColor = "darkred";
     }
+
 </script>
-												</body>
-											</html>
+
+</body>
+</html>

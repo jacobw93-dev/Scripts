@@ -18,12 +18,13 @@
 				cursor: pointer;
 			}
 
-			.container {
+			.container > div {
 				align-items: center;
 				justify-content: center;
 				display: flex;
 				height: 5vh;
 				width: 100%;
+				margin-bottom: 20px;
 			}
 
 			.output {
@@ -84,7 +85,6 @@
 	<div>
 		<button onclick="generate()" class="btn" id="gen-btn">Generate a Gradient</button>
 	</div>
-	<br>
 	<div>
 		<code id="output"/>
 	</div>

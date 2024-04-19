@@ -74,17 +74,20 @@
 				padding: 5px;
 				font-size: 16px;
 			}
+			#image-container {
+            display: block;
+			}
 		</style>
 	</head>
 <body id="bg" style="color:white;text-shadow: 1px 1px #000000;">
-	<div class="container">
-		<div>
-			<button onclick="generate()" class="btn" id="gen-btn">Generate a Gradient</button>
-		</div>
-		<div>
-			<code id="output"/>
-		</div>
+<div class="container">
+	<div>
+		<button onclick="generate()" class="btn" id="gen-btn">Generate a Gradient</button>
 	</div>
+	<div>
+		<code id="output"/>
+	</div>
+</div>
 <BODY>
 <h1 align="center">Raport VisualDirSize, 18.04.2024 12:00:00</h1>
 <p align="center">
@@ -95,16 +98,22 @@
 <b>Wszystkich plików - 8 047 703</b>
 </p>
 <br>
-<p align="center">
-<img src="Folders_disk_usage_report_order_by_name.jpg"/>
-</p>
-
-<br><br>
+<div class="container">
+	<div>
+		<button onclick="toggleImage()" class="btn" id="toggle-btn">Toggle Image</button>
+	</div>
+</div>
+<br>
+<div id="image-container">
+	<p align="center">
+		<img src="Folders_disk_usage_report_order_by_name.jpg" id="report-image"/>
+	</p>
+</div>
 
 <div class="container">
-<div class="search-container">
-    <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search for names...">
-</div>
+	<div class="search-container">
+		<input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search for names...">
+	</div>
 </div>
 
 <br>
@@ -7862,6 +7871,10 @@
             }
         }
     }
+	function toggleImage() {
+		var imageContainer = document.getElementById("image-container");
+		imageContainer.style.display = (imageContainer.style.display === "none") ? "block" : "none";
+	}
 
 </script>
 

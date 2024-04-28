@@ -1,5 +1,5 @@
 $Host.UI.RawUI.WindowTitle = "Batch rename images"
-$Host.PrivateData.ProgressBackgroundColor = 'Red'
+$Host.PrivateData.ProgressBackgroundColor = 'Yellow'
 $Host.PrivateData.ProgressForegroundColor = 'Black'
 
 $fileTypes = @('.jpeg', '.jpg', '.png')
@@ -137,9 +137,9 @@ $Choose = ChangeFoldersNames
 # Start time
 $startTime = Get-Date
 
-cd -LiteralPath "$InputFolder" ;
-Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object { $_.extension -in $excludedFileTypes }) } | gci -File -Recurse | where-Object { $_.extension -notin $fileTypes } | Remove-Item ;
-ls  $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item ;
+#cd -LiteralPath "$InputFolder" ;
+Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object { $_.extension -in $excludedFileTypes }) } | gci -File -Recurse | where-Object { $_.extension -notin $fileTypes } | Remove-Item -Verbose;
+ls $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item ;
 
 
 If ( $Choose -eq "1" ) { $FolderNumerator = SetFolderNumerator }
@@ -159,7 +159,7 @@ ForEach ($Parent in $ParentFolders) {
 	}
 }
 
-ls  $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item ;
+ls $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item ;
 
 If ( $Choose -eq "1" )
 	{
@@ -192,8 +192,8 @@ foreach ($folder in $ParentFolders) {
 	
 $myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 	
-$Folder = dir -LiteralPath . -Recurse -Directory | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } ;
-$folder_counter = (dir -LiteralPath . -Recurse -Directory).Count
+$Folder = dir -LiteralPath $InputFolder -Recurse -Directory | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } ;
+$folder_counter = (dir -LiteralPath $InputFolder -Recurse -Directory).Count
 $k = 0
 $file_counter = (Get-ChildItem -Recurse -Directory -LiteralPath "$InputFolder" | Get-ChildItem -File | where-object { $_.extension -in $fileTypes }).Count
 $l = 0
@@ -210,7 +210,7 @@ Foreach ($dir In $Folder) {
 	$counter = 1
 	$newdir = $dir.name
 	# Search for the files set in the filter
-	$files = Get-ChildItem -LiteralPath $dir.fullname -File | where-object { $_.extension -in $fileTypes } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(50) }) }
+	$files = Get-ChildItem -LiteralPath $dir.fullname -File | where-object { $_.extension -in $fileTypes } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) }
 	$files_counter = ($files).Count
 	$PaddingLength = $files_counter.ToString().Length
 	Foreach ($file In $files) {
@@ -238,7 +238,7 @@ Foreach ($dir In $Folder) {
 
 $myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 
-ls $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item ;
+ls $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item -Verbose;
 
 # End time
 $endTime = Get-Date

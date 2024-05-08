@@ -116,7 +116,7 @@ function ExtractArchives {
 	}
 }
 
-function CleanFilesandFolders (
+function CleanFilesandFolders {
 Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object { $_.extension -in $excludedFileTypes }) } | gci -File -Recurse | where-Object { $_.extension -notin $fileTypes } | Remove-Item -Verbose;
 ls $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item -Verbose
 }

@@ -116,6 +116,11 @@ function ExtractArchives {
 	}
 }
 
+function CleanFilesandFolders (
+Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object { $_.extension -in $excludedFileTypes }) } | gci -File -Recurse | where-Object { $_.extension -notin $fileTypes } | Remove-Item -Verbose;
+ls $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item -Verbose
+}
+
 $Archive_counter = (gci $InputFolder -file -Recurse | where-object { $_.extension -in $CompressedFileTypes } ).Count
 If ( $Archive_counter -ge 1 ) {
 	$ArchivesOnly = ExtractArchivesOnly
@@ -137,10 +142,7 @@ $Choose = ChangeFoldersNames
 # Start time
 $startTime = Get-Date
 
-#cd -LiteralPath "$InputFolder" ;
-Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -file -recurse | where-object { $_.extension -in $excludedFileTypes }) } | gci -File -Recurse | where-Object { $_.extension -notin $fileTypes } | Remove-Item -Verbose;
-ls $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item ;
-
+CleanFilesandFolders
 
 If ( $Choose -eq "1" ) { $FolderNumerator = SetFolderNumerator }
 If ( $Archive_counter -ge 1 ) { ExtractArchives }
@@ -159,7 +161,7 @@ ForEach ($Parent in $ParentFolders) {
 	}
 }
 
-ls $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item ;
+CleanFilesandFolders
 
 If ( $Choose -eq "1" )
 	{
@@ -240,7 +242,7 @@ Foreach ($dir In $Folder) {
 
 $myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 
-ls $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item -Verbose;
+CleanFilesandFolders
 
 # End time
 $endTime = Get-Date
@@ -250,8 +252,6 @@ $processTime = $endTime - $startTime
 
 # Format process time
 $processTimeFormatted = '{0:hh\:mm\:ss}' -f $processTime
-
-Clear
 
 # Write process time to console
 Write-Host "Process time: $processTimeFormatted (hh:mm:ss)"

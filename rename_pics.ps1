@@ -1,6 +1,7 @@
 $Host.UI.RawUI.WindowTitle = "Batch rename images"
-$Host.PrivateData.ProgressBackgroundColor = 'Yellow'
-$Host.PrivateData.ProgressForegroundColor = 'Black'
+#$Host.PrivateData.ProgressBackgroundColor = 'Yellow'
+#$Host.PrivateData.ProgressForegroundColor = 'Black'
+$PSStyle.Progress.View = 'Minimal'
 
 $fileTypes = @('.jpeg', '.jpg', '.png')
 $excludedFileTypes = @('.!qb', '.part', '.zip', '.rar')
@@ -16,7 +17,7 @@ Set-ItemProperty $key ShowSuperHidden 1
 
 $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
 	SelectedPath = 'D:\Downloads\Pics\'
-	Description  = "Select a directory containing images"
+	Description = "Select a directory containing images"
 }
 
 
@@ -99,18 +100,18 @@ function Is-Numeric ($Value) {
 
 function ExtractArchives {
 	$Archives = ls -LiteralPath "$InputFolder" -file -Recurse | where-object { $_.extension -in $CompressedFileTypes } ;
-	$Archive_counter = (gci $InputFolder -file -Recurse | where-object { $_.extension -in $CompressedFileTypes } ).Count
-	$k = 0
+	$Total_archives_count = (gci $InputFolder -file -Recurse | where-object { $_.extension -in $CompressedFileTypes } ).Count
+	$archives_counter = 0
 
 	Foreach ($Archive In $Archives) {
-		$k++
-		$percent_Archive = [math]::Round($k / $Archive_counter * 100)
-		Write-Progress -Id 1  -activity "Total Progress Bar" -CurrentOperation "Current file: '$Archive'" -Status "Processing $k of $Archive_counter ($percent_Archive%)"  -PercentComplete $percent_Archive
+		$archives_counter++
+		$percent_Archive = [math]::Round($archives_counter / $Total_archives_count * 100)
+		Write-Progress -Id 1 -activity "Total Progress Bar" -CurrentOperation "Current file: '$Archive'" -Status "Processing $k of $Total_archives_count ($percent_Archive%)" -PercentComplete $percent_Archive
 		$NewName = ($Archive.Name -Replace $regex_str, ".");
 		$NewBaseName = ($Archive.Name -Replace $regex_str, ".");
 		$NewFullName = ($Archive.FullName -Replace [regex]::Escape($Archive.Name), $NewName);
 		$TargetPath = ($Archive.FullName -Replace [regex]::Escape($Archive.BaseName), $NewBaseName).trimend($Archive.Extension);
-		Rename-Item  -LiteralPath $Archive.FullName -NewName $NewName;
+		Rename-Item -LiteralPath $Archive.FullName -NewName $NewName;
 		Expand-Archive -LiteralPath $NewFullName -DestinationPath $TargetPath -Force
 		Remove-Item -LiteralPath $NewFullName
 	}
@@ -121,8 +122,8 @@ Get-ChildItem -LiteralPath $InputFolder -Directory | ? { !(gci -LiteralPath $_ -
 ls $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item -Verbose
 }
 
-$Archive_counter = (gci $InputFolder -file -Recurse | where-object { $_.extension -in $CompressedFileTypes } ).Count
-If ( $Archive_counter -ge 1 ) {
+$Total_archives_count = (gci $InputFolder -file -Recurse | where-object { $_.extension -in $CompressedFileTypes } ).Count
+If ( $Total_archives_count -ge 1 ) {
 	$ArchivesOnly = ExtractArchivesOnly
 	If ( $ArchivesOnly -eq "1" ) {
 		$startTime = Get-Date
@@ -145,7 +146,7 @@ $startTime = Get-Date
 CleanFilesandFolders
 
 If ( $Choose -eq "1" ) { $FolderNumerator = SetFolderNumerator }
-If ( $Archive_counter -ge 1 ) { ExtractArchives }
+If ( $Total_archives_count -ge 1 ) { ExtractArchives }
 	
 # Get list of parent folders in root path
 Switch ($RenMode) {
@@ -168,17 +169,18 @@ If ( $Choose -eq "1" )
 		
 		Switch ($RenMode)
 		{
-			"0" { $ParentFolders = Get-ChildItem -LiteralPath $InputFolder -Directory -Name -Recurse | Where-Object { ($_ -split '[/\\]').Count -eq 1 } | Get-Item -LiteralPath { "$InputFolder\$_" }  | ? { (gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -notin $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } }
-			"1" { $ParentFolders = Get-ChildItem -LiteralPath $InputFolder -Directory -Name -Recurse | Where-Object { ($_ -split '[/\\]').Count -eq 2 } | Get-Item -LiteralPath { "$InputFolder\$_" }  | ? { (gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -notin $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } }
+			"0" { $ParentFolders = Get-ChildItem -LiteralPath $InputFolder -Directory -Name -Recurse | Where-Object { ($_ -split '[/\\]').Count -eq 1 } | Get-Item -LiteralPath { "$InputFolder\$_" } | ? { (gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -notin $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } }
+			"1" { $ParentFolders = Get-ChildItem -LiteralPath $InputFolder -Directory -Name -Recurse | Where-Object { ($_ -split '[/\\]').Count -eq 2 } | Get-Item -LiteralPath { "$InputFolder\$_" } | ? { (gci -LiteralPath $_.FullName -file -recurse | where-object {$_.extension -notin $excludedFileTypes}) } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } }
 		}
 		
 	$myChangeLog = [System.Collections.Generic.List[object]]::new()
 	$number = $FolderNumerator
-	$folder_counter = ($ParentFolders).Count
-	$PaddingLength = $folder_counter.ToString().Length
+	
 	foreach ($folder in $ParentFolders) {
 		if ( ($previousfolder.Parent.FullName) -ne ($folder.Parent.FullName) ) {$number = $FolderNumerator}
 		try {
+			$folder_count = (gci $folder.Parent).Count
+			$PaddingLength = $folder_count.ToString().Length
 			$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 			$NewName = $folder.Parent.Name + ' - Set ' + ($number.ToString().PadLeft($PaddingLength, '0'))
 			Rename-Item -LiteralPath $folder.FullName -NewName $NewName -ErrorAction Stop -Verbose
@@ -197,17 +199,19 @@ If ( $Choose -eq "1" )
 
 	
 $Folder = dir -LiteralPath $InputFolder -Recurse -Directory | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } ;
-$folder_counter = (dir -LiteralPath $InputFolder -Recurse -Directory).Count
-$k = 0
-$file_counter = (Get-ChildItem -Recurse -Directory -LiteralPath "$InputFolder" | Get-ChildItem -File | where-object { $_.extension -in $fileTypes }).Count
-$l = 0
+$folder_count = (dir -LiteralPath $InputFolder -Recurse -Directory).Count
+$dir_counter = 0
+$Total_files_count = (Get-ChildItem -Recurse -Directory -LiteralPath "$InputFolder" | Get-ChildItem -File | where-object { $_.extension -in $fileTypes }).Count
+$Total_files_counter = 0
+
+$startTime_ProgressBar = get-date
 
 $myChangeLog = [System.Collections.Generic.List[object]]::new()
-  
+ 
 Foreach ($dir In $Folder) {
-	$k++
-	$percent_folder = [math]::Round($k / $folder_counter * 100)
-	Write-Progress -Id 1 -activity "Folder Progress Bar" -CurrentOperation "Current directory: '$dir'" -Status "Processing $k of $folder_counter ($percent_folder%)"  -PercentComplete $percent_folder
+	$dir_counter++
+	$Total_dir_complete = [math]::Round($dir_counter / $folder_count * 100)
+	Write-Progress -Id 2 -parentId 1 -activity "Total Directories" -CurrentOperation "Current directory: '$dir'" -Status "Processing $dir_counter of $folder_count ($Total_dir_complete%)" -PercentComplete $Total_dir_complete
 	$current_dir = (Get-Location).path + '\' + $dir;
 
 	# Set default value for addition to file name
@@ -215,22 +219,35 @@ Foreach ($dir In $Folder) {
 	$newdir = $dir.name
 	# Search for the files set in the filter
 	$files = Get-ChildItem -LiteralPath $dir.fullname -File | where-object { $_.extension -in $fileTypes } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) }
-	$files_counter = ($files).Count
-	$PaddingLength = $files_counter.ToString().Length
+	$files_count = ($files).Count
+	$PaddingLength = $files_count.ToString().Length
+	$dir_files_counter = 0
 	Foreach ($file In $files) {
 		$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 		$extension = $file.Extension
 		# Check if a file exists
 		If ($file) {
-			$l++
-			$percent_file = [math]::Round($l / $file_counter * 100)
-			Write-Progress -Id 2  -activity "Total Progress Bar" -CurrentOperation "Current file: '$file'" -Status "Processing $l of $file_counter ($percent_file%)"  -PercentComplete $percent_file
+			$Total_files_counter++
+			$dir_files_counter++
+			$Total_complete = [math]::Round($Total_files_counter / $Total_files_count * 100)
+			
+			
+			$elapsedTime = $(get-date) - $startTime 
+			$estimatedTotalSeconds = $Total_files_count / $Total_files_counter * $elapsedTime.TotalSeconds 
+			$estimatedTotalSecondsTS = New-TimeSpan -seconds $estimatedTotalSeconds
+			$estimatedCompletionTime = $startTime + $estimatedTotalSecondsTS
+			
+			Write-Progress -Id 1 -activity "Estimated Completion Time" -Status "Estimated Completion Time=$estimatedCompletionTime"
+			Write-Progress -Id 3 -parentId 2 -activity "Total Files" -CurrentOperation "Current file: '$file'" -Status "Processing $Total_files_counter of $Total_files_count ($Total_complete%)" -PercentComplete $Total_complete
+			$Folder_Complete = [math]::Round($dir_files_counter / $files_count * 100)
+			Write-Progress -Id 4 -parentId 3 -activity "Current Folder Files" -CurrentOperation "Current file: '$file'" -Status "Processing $dir_files_counter of $files_count ($Folder_Complete%)" -PercentComplete $Folder_Complete
+
 			$replace = $newdir + "_" + $zero + ($counter.ToString().PadLeft($PaddingLength, '0')) + "." + $extension
 			# Trim spaces and rename the file
 			$image_string = $file.fullname.ToString().Trim()
 			#"$split[0] renamed to $replace"
 			$replace = (($replace -Replace $regex_str, ".") -replace '\.+', '.');
-			Rename-Item  -LiteralPath "$image_string" "$replace";
+			Rename-Item -LiteralPath "$image_string" "$replace";
 
 			$logEntry = $("$Current_timestamp;'{0}';'{1}'" -f $image_string, $replace)
 			$myChangeLog.Add($logEntry) | Out-Null
@@ -256,6 +273,6 @@ $processTimeFormatted = '{0:hh\:mm\:ss}' -f $processTime
 # Write process time to console
 Write-Host "Process time: $processTimeFormatted (hh:mm:ss)"
 
-"`nProcess time: $processTimeFormatted  (hh:mm:ss)" | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
+"`nProcess time: $processTimeFormatted (hh:mm:ss)" | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 
 pause

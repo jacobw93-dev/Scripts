@@ -1,6 +1,7 @@
 $Host.UI.RawUI.WindowTitle = "Batch rename images"
-# $Host.PrivateData.ProgressBackgroundColor = 'Yellow'
-# $Host.PrivateData.ProgressForegroundColor = 'Black'
+$Host.UI.RawUI.ForegroundColor = "White"
+$Host.PrivateData.ProgressBackgroundColor = 'Magenta'
+$Host.PrivateData.ProgressForegroundColor = 'Black'
 # $PSStyle.Progress.View = 'Minimal'
 
 $fileTypes = @('.jpeg', '.jpg', '.png')
@@ -23,10 +24,10 @@ $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @
 
 if ($FolderBrowser.ShowDialog() -eq 'OK') {
 	$InputFolder = $FolderBrowser.SelectedPath
-	Write-Host "Selected folder: $InputFolder"
+	Write-Host -ForegroundColor Green "Selected folder: $InputFolder"
 }
 else {
-	Write-Host "User cancelled the operation."
+	Write-Host -ForegroundColor Red "User cancelled the operation."
 	Pause
 	Exit
 }
@@ -41,7 +42,8 @@ $changelog_FullName = "$InputFolder" + '\' + "changelog_" + ((Get-Item -Path $In
 function RenameMode {
 	$answer = $null
 	while (@("1", "2") -notcontains $answer) {
-		$answer = Read-Host "`nShould I swap file names in first or second level subdirectories? `n1 (First Level), 2 (Second Level)"
+		Write-Host -ForegroundColor Green "`nShould I swap file names in first or second level subdirectories? `n1 (First Level), 2 (Second Level)"
+		$answer = Read-Host
 		$answer = $answer.ToUpper().Trim();
 		Switch ($answer) {
 			"1" { $RenMode = 0 }
@@ -58,7 +60,8 @@ function Get-UserChoice {
 
 	$answer = $null
 	while (@("y", "n") -notcontains $answer) {
-		$answer = Read-Host "`n$Question Y (Yes), N (No)"
+		Write-Host -ForegroundColor Green "`n$Question Y (Yes), N (No)"
+		$answer = Read-Host
 		$answer = $answer.ToLower().Trim()
 		switch ($answer) {
 			y { $Chosen = "1" }
@@ -91,11 +94,13 @@ function Is-Numeric ($Value) {
 
 function SetFolderNumerator {
 	$defaultValue = 1
-	$Number_from = Read-Host "`nSpecify the number from which to start numbering the directories (default: $defaultValue)"
+	Write-Host -ForegroundColor Green "`nSpecify the number from which to start numbering the directories (default: $defaultValue)"
+	$Number_from = Read-Host
 	if ($Number_from -eq "") { $Number_from = $defaultValue }
 	$Number_result = Is-Numeric $Number_from
 	while ($Number_result -eq $False) {
-		$Number_from = Read-Host "`nSpecify the number from which to start numbering the directories (default: $defaultValue)"
+		Write-Host -ForegroundColor Green "`nSpecify the number from which to start numbering the directories (default: $defaultValue)"
+		$Number_from = Read-Host
 		if ($Number_from -eq "") { $Number_from = $defaultValue }
 		$Number_result = Is-Numeric $Number_from
 	}
@@ -113,18 +118,19 @@ function ExtractArchives {
 		$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 		$archives_counter++
 		$percent_Archive = [math]::Round($archives_counter / $Total_archives_count * 100)
-		Write-Progress -Id 1 -activity "Total Progress Bar" -CurrentOperation "Current file: '$Archive'" -Status "Processing $k of $Total_archives_count ($percent_Archive%)" -PercentComplete $percent_Archive
+		Write-Progress -Id 1 -activity "Total Extraction Progress" -CurrentOperation "Current file: '$Archive'" -Status "Processing $archives_counter of $Total_archives_count ($percent_Archive%)" -PercentComplete $percent_Archive
 		$NewName = ($Archive.Name -Replace $regex_str, ".");
 		$NewBaseName = ($Archive.Name -Replace $regex_str, ".");
 		$NewFullName = ($Archive.FullName -Replace [regex]::Escape($Archive.Name), $NewName);
 		$TargetPath = ($Archive.FullName -Replace [regex]::Escape($Archive.BaseName), $NewBaseName).trimend($Archive.Extension);
 		Rename-Item -LiteralPath $Archive.FullName -NewName $NewName;
 		# Expand-Archive -LiteralPath $NewFullName -DestinationPath $TargetPath -Force
-		Expand-7Zip -ArchiveFileName $NewFullName -TargetPath $TargetPath -Force
+		Expand-7Zip -ArchiveFileName $NewFullName -TargetPath $TargetPath
 		Remove-Item -LiteralPath $NewFullName
 		$logEntry = $("$Current_timestamp; Extracted archive:'{0}';'{1}' " -f $NewFullName, $TargetPath)
 		$myChangeLog.Add($logEntry) | Out-Null
 	}
+	# return $Total_archives_count
 	$myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 }
 
@@ -134,6 +140,7 @@ function CleanFilesandFolders {
 }
 
 $Total_archives_count = (Get-ChildItem $InputFolder -file -Recurse | where-object { $_.extension -in $CompressedFileTypes } ).Count
+$Archives_count = $Total_archives_count
 If ( $Total_archives_count -ge 1 ) {
 	$ArchivesOnly = ExtractArchivesOnly
 	If ( $ArchivesOnly -eq "1" ) {
@@ -202,10 +209,14 @@ $ParentFolders = get-ParentFolders -InputValueString "1" -RenModeString $RenMode
 
 If ( ($MoveLQ -eq "1") -and (($ParentFolders).Count -ge 1)) {
 	$i = 0
+	$j = 0
 	$image = New-Object -ComObject Wia.ImageFile
 	$pictures = Get-ChildItem -LiteralPath ($ParentFolders.FullName) -recurse -file | where-object { $_.extension -in $fileTypes }
-	
+	$pictures_Count = $pictures.Count
 	ForEach ($picture in $pictures) {
+		$j++
+		$percent = $j / $pictures_Count * 100 
+		Write-Progress -Id 5 -Activity "Analyzing images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Processing $j of $pictures_Count" -PercentComplete $percent
 		$image.LoadFile($picture.fullname)
 		if (([int]$image.Height.ToString() -le 900) -and ([int]$image.Width.ToString() -le 900)) {
 			$true | Out-Null
@@ -216,14 +227,14 @@ If ( ($MoveLQ -eq "1") -and (($ParentFolders).Count -ge 1)) {
 		}
 	}
 
-	$counter = ($LQImagesArray).Count
+	$LQImages_counter = ($LQImagesArray).Count
 	ForEach ($LQImage in ($LQImagesArray)) {
 		$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 		$destinationFolder = $LQImage.Directory.Parent.FullName + '\' + $LowQualityName;
 		$destinationFile = $destinationFolder + '\' + $LQImage.Directory.Name + '_' + $LQImage.Name;
 		$i++
-		$percent = $i / $counter * 100  
-		Write-Progress -Id 5 -Activity "Moving LQ images..." -CurrentOperation "Current file: `"$($LQImage.Name)`", directory: `"$($LQImage.Directory.Name)`"" -Status "Processing $i of $counter" -PercentComplete $percent
+		$percent = $i / $LQImages_counter * 100  
+		Write-Progress -Id 5 -Activity "Moving LQ images..." -CurrentOperation "Current file: `"$($LQImage.Name)`", directory: `"$($LQImage.Directory.Name)`"" -Status "Processing $i of $LQImages_counter" -PercentComplete $percent
 		if (-not (Test-Path -Path $destinationFolder -PathType Container)) {
 			New-Item -Path $destinationFolder -ItemType Directory
 		}
@@ -264,7 +275,7 @@ If ( $Choose -eq "1" ) {
 }
 	
 $Folders = Get-ChildItem -LiteralPath $InputFolder -Recurse -Directory -exclude "$LowQualityName" | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } ;
-$folder_count = (Get-ChildItem -LiteralPath $InputFolder -Recurse -Directory).Count
+$Total_folder_count = (Get-ChildItem -LiteralPath $InputFolder -Recurse -Directory).Count
 $dir_counter = 0
 $Total_files_count = (Get-ChildItem -Recurse -Directory -LiteralPath "$InputFolder" | Get-ChildItem -File | where-object { $_.extension -in $fileTypes }).Count
 $Total_files_counter = 0
@@ -275,8 +286,8 @@ $myChangeLog = [System.Collections.Generic.List[object]]::new()
  
 Foreach ($dir In $Folders) {
 	$dir_counter++
-	$Total_dir_complete = [math]::Round($dir_counter / $folder_count * 100)
-	Write-Progress -Id 2 -parentId 1 -activity "Total Directories" -CurrentOperation "Current directory: '$dir'" -Status "Processing $dir_counter of $folder_count ($Total_dir_complete%)" -PercentComplete $Total_dir_complete
+	$Total_dir_complete = [math]::Round($dir_counter / $Total_folder_count * 100)
+	Write-Progress -Id 2 -parentId 1 -activity "Total Directories" -CurrentOperation "Current directory: '$dir'" -Status "Processing $dir_counter of $Total_folder_count ($Total_dir_complete%)" -PercentComplete $Total_dir_complete
 	# $current_dir = (Get-Location).path + '\' + $dir;
 
 	# Set default value for addition to file name
@@ -329,9 +340,27 @@ $processTime = $endTime - $startTime
 # Format process time
 $processTimeFormatted = '{0:hh\:mm\:ss}' -f $processTime
 
+
 # Write process time to console
-Write-Host "Process time: $processTimeFormatted (hh:mm:ss)"
+Write-Host -ForegroundColor Green "Process time: $processTimeFormatted (hh:mm:ss)"
+
+Write-Host -ForegroundColor Blue "Press 'Q' to exit."
+while ($true) {
+	Write-Progress -Id 1 -activity "Total Extraction Progress" -Status "$Archives_count" -PercentComplete 100
+	Write-Progress -Id 2 -parentId 1 -Activity "Moving LQ images..." -Status "$LQImages_counter" -PercentComplete 100
+	Write-Progress -Id 3 -parentId 2 -activity "Estimated Completion Time" -Status "$estimatedCompletionTime" -PercentComplete 100
+	Write-Progress -Id 4 -parentId 3 -activity "Total Directories" -Status "$Total_folder_count" -PercentComplete 100
+	Write-Progress -Id 5 -parentId 4 -activity "Total Files" -Status "$Total_files_count" -PercentComplete 100
+	# Write-Progress -Id 6 -parentId 5 -activity "Current Folder Files" -Status "Completed" -PercentComplete 100
+	Start-Sleep -Milliseconds 250
+
+	# Check if 'Q' key is pressed
+	if ([Console]::KeyAvailable) {
+		$key = [Console]::ReadKey($true)
+		if ($key.Key -eq 'Q') {
+			break
+		}
+	}
+}
 
 "`nProcess time: $processTimeFormatted (hh:mm:ss)" | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
-
-pause

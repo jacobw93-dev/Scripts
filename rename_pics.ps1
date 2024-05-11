@@ -113,14 +113,14 @@ function ExtractArchives {
 		$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 		$archives_counter++
 		$percent_Archive = [math]::Round($archives_counter / $Total_archives_count * 100)
-		Write-Progress -Id 1 -activity "Total Progress Bar" -CurrentOperation "Current file: '$Archive'" -Status "Processing $k of $Total_archives_count ($percent_Archive%)" -PercentComplete $percent_Archive
+		Write-Progress -Id 1 -activity "Total Extraction Progress" -CurrentOperation "Current file: '$Archive'" -Status "Processing $archives_counter of $Total_archives_count ($percent_Archive%)" -PercentComplete $percent_Archive
 		$NewName = ($Archive.Name -Replace $regex_str, ".");
 		$NewBaseName = ($Archive.Name -Replace $regex_str, ".");
 		$NewFullName = ($Archive.FullName -Replace [regex]::Escape($Archive.Name), $NewName);
 		$TargetPath = ($Archive.FullName -Replace [regex]::Escape($Archive.BaseName), $NewBaseName).trimend($Archive.Extension);
 		Rename-Item -LiteralPath $Archive.FullName -NewName $NewName;
 		# Expand-Archive -LiteralPath $NewFullName -DestinationPath $TargetPath -Force
-		Expand-7Zip -ArchiveFileName $NewFullName -TargetPath $TargetPath -Force
+		Expand-7Zip -ArchiveFileName $NewFullName -TargetPath $TargetPath
 		Remove-Item -LiteralPath $NewFullName
 		$logEntry = $("$Current_timestamp; Extracted archive:'{0}';'{1}' " -f $NewFullName, $TargetPath)
 		$myChangeLog.Add($logEntry) | Out-Null

@@ -118,7 +118,7 @@ function ExtractArchives {
 		$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 		$archives_counter++
 		$percent_Archive = [math]::Round($archives_counter / $Total_archives_count * 100)
-		Write-Progress -Id 1 -activity "Total Extraction Progress" -CurrentOperation "Current file: '$Archive'" -Status "Processing $archives_counter of $Total_archives_count ($percent_Archive%)" -PercentComplete $percent_Archive
+		Write-Progress -activity "Total Extraction Progress" -CurrentOperation "Current file: '$Archive'" -Status "Processing $archives_counter of $Total_archives_count ($percent_Archive%)" -PercentComplete $percent_Archive
 		$NewName = ($Archive.Name -Replace $regex_str, ".");
 		$NewBaseName = ($Archive.Name -Replace $regex_str, ".");
 		$NewFullName = ($Archive.FullName -Replace [regex]::Escape($Archive.Name), $NewName);
@@ -216,7 +216,7 @@ If ( ($MoveLQ -eq "1") -and (($ParentFolders).Count -ge 1)) {
 	ForEach ($picture in $pictures) {
 		$j++
 		$percent = $j / $pictures_Count * 100 
-		Write-Progress -Id 5 -Activity "Analyzing images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Processing $j of $pictures_Count" -PercentComplete $percent
+		Write-Progress -Activity "Analyzing images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Processing $j of $pictures_Count" -PercentComplete $percent
 		$image.LoadFile($picture.fullname)
 		if (([int]$image.Height.ToString() -le 900) -and ([int]$image.Width.ToString() -le 900)) {
 			$true | Out-Null
@@ -234,7 +234,7 @@ If ( ($MoveLQ -eq "1") -and (($ParentFolders).Count -ge 1)) {
 		$destinationFile = $destinationFolder + '\' + $LQImage.Directory.Name + '_' + $LQImage.Name;
 		$i++
 		$percent = $i / $LQImages_counter * 100  
-		Write-Progress -Id 5 -Activity "Moving LQ images..." -CurrentOperation "Current file: `"$($LQImage.Name)`", directory: `"$($LQImage.Directory.Name)`"" -Status "Processing $i of $LQImages_counter" -PercentComplete $percent
+		Write-Progress -Activity "Moving LQ images..." -CurrentOperation "Current file: `"$($LQImage.Name)`", directory: `"$($LQImage.Directory.Name)`"" -Status "Processing $i of $LQImages_counter" -PercentComplete $percent
 		if (-not (Test-Path -Path $destinationFolder -PathType Container)) {
 			New-Item -Path $destinationFolder -ItemType Directory
 		}
@@ -340,7 +340,7 @@ $processTime = $endTime - $startTime
 # Format process time
 $processTimeFormatted = '{0:hh\:mm\:ss}' -f $processTime
 
-
+clear-host
 # Write process time to console
 Write-Host -ForegroundColor Green "Process time: $processTimeFormatted (hh:mm:ss)"
 

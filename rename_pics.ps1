@@ -346,8 +346,8 @@ Write-Host -ForegroundColor Green "Process time: $processTimeFormatted (hh:mm:ss
 
 Write-Host -ForegroundColor Blue "Press 'Q' to exit."
 while ($true) {
-	Write-Progress -Id 1 -activity "Total Extraction Progress" -Status "$Archives_count" -PercentComplete 100
-	Write-Progress -Id 2 -parentId 1 -Activity "Moving LQ images..." -Status "$LQImages_counter" -PercentComplete 100
+	if ($Archives_count -gt 0) {Write-Progress -Id 1 -activity "Total Extraction Progress" -Status "$Archives_count" -PercentComplete 100}
+	if ($LQImages_counter -gt 0) {Write-Progress -Id 2 -parentId 1 -Activity "Moving LQ images..." -Status "$LQImages_counter" -PercentComplete 100}
 	Write-Progress -Id 3 -parentId 2 -activity "Estimated Completion Time" -Status "$estimatedCompletionTime" -PercentComplete 100
 	Write-Progress -Id 4 -parentId 3 -activity "Total Directories" -Status "$Total_folder_count" -PercentComplete 100
 	Write-Progress -Id 5 -parentId 4 -activity "Total Files" -Status "$Total_files_count" -PercentComplete 100

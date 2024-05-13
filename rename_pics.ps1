@@ -23,10 +23,10 @@ $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @
 
 if ($FolderBrowser.ShowDialog() -eq 'OK') {
 	$InputFolder = $FolderBrowser.SelectedPath
-	Write-Host "Selected folder: $InputFolder"
+	Write-Host -ForegroundColor Green "Selected folder: $InputFolder"
 }
 else {
-	Write-Host "User cancelled the operation."
+	Write-Host -ForegroundColor Red "User cancelled the operation."
 	Pause
 	Exit
 }
@@ -41,7 +41,8 @@ $changelog_FullName = "$InputFolder" + '\' + "changelog_" + ((Get-Item -Path $In
 function RenameMode {
 	$answer = $null
 	while (@("1", "2") -notcontains $answer) {
-		$answer = Read-Host "`nShould I swap file names in first or second level subdirectories? `n1 (First Level), 2 (Second Level)"
+		Write-Host -ForegroundColor Green "`nShould I swap file names in first or second level subdirectories? `n1 (First Level), 2 (Second Level)"
+        $answer = Read-Host
 		$answer = $answer.ToUpper().Trim();
 		Switch ($answer) {
 			"1" { $RenMode = 0 }
@@ -58,7 +59,8 @@ function Get-UserChoice {
 
 	$answer = $null
 	while (@("y", "n") -notcontains $answer) {
-		$answer = Read-Host "`n$Question Y (Yes), N (No)"
+		Write-Host -ForegroundColor Green "`n$Question Y (Yes), N (No)"
+		$answer = Read-Host
 		$answer = $answer.ToLower().Trim()
 		switch ($answer) {
 			y { $Chosen = "1" }
@@ -91,11 +93,13 @@ function Is-Numeric ($Value) {
 
 function SetFolderNumerator {
 	$defaultValue = 1
-	$Number_from = Read-Host "`nSpecify the number from which to start numbering the directories (default: $defaultValue)"
+	Write-Host -ForegroundColor Green "`nSpecify the number from which to start numbering the directories (default: $defaultValue)"
+	$Number_from = Read-Host
 	if ($Number_from -eq "") { $Number_from = $defaultValue }
 	$Number_result = Is-Numeric $Number_from
 	while ($Number_result -eq $False) {
-		$Number_from = Read-Host "`nSpecify the number from which to start numbering the directories (default: $defaultValue)"
+		Write-Host -ForegroundColor Green "`nSpecify the number from which to start numbering the directories (default: $defaultValue)"
+		$Number_from = Read-Host
 		if ($Number_from -eq "") { $Number_from = $defaultValue }
 		$Number_result = Is-Numeric $Number_from
 	}

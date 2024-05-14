@@ -24,7 +24,8 @@ $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @
 
 if ($FolderBrowser.ShowDialog() -eq 'OK') {
 	$InputFolder = $FolderBrowser.SelectedPath
-	Write-Host -ForegroundColor Green "Selected folder: $InputFolder"
+	Write-Host -ForegroundColor Green "Selected folder:`n"
+	Write-Host "$InputFolder"
 }
 else {
 	Write-Host -ForegroundColor Red "User cancelled the operation."
@@ -310,6 +311,7 @@ Foreach ($dir In $Folders) {
 			$estimatedTotalSeconds = $Total_files_count / $Total_files_counter * $elapsedTime.TotalSeconds 
 			$estimatedTotalSecondsTS = New-TimeSpan -seconds $estimatedTotalSeconds
 			$estimatedCompletionTime = $startTime + $estimatedTotalSecondsTS
+			$estimatedCompletionTime = Get-Date -Date $estimatedCompletionTime -Format "yyyy/MM/dd HH:mm:ss"
 			Write-Progress -Id 1 -activity "Estimated Completion Time" -Status "Estimated Completion Time = $estimatedCompletionTime"
 			Write-Progress -Id 3 -parentId 2 -activity "Total Files" -CurrentOperation "Current file: '$file'" -Status "Processing $Total_files_counter of $Total_files_count ($Total_complete%)" -PercentComplete $Total_complete
 			$Folder_Complete = [math]::Round($dir_files_counter / $files_count * 100)

@@ -258,11 +258,11 @@ If ( $Choose -eq "1" ) {
 	foreach ($folder in $ParentFolders) {
 		if ( ($previousfolder.Parent.FullName) -ne ($folder.Parent.FullName) ) { $number = $FolderNumerator }
 		try {
-			$folder_count = (Get-ChildItem $folder.Parent.FullName).Count
+			$folder_count = (Get-ChildItem $folder.Parent.FullName -Directory).Count
 			$PaddingLength = $folder_count.ToString().Length
 			$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 			$NewName = $folder.Parent.Name + ' - Set ' + ($number.ToString().PadLeft($PaddingLength, '0'))
-			Rename-Item -LiteralPath $folder.FullName -NewName $NewName -ErrorAction Stop -Verbose
+			Rename-Item -LiteralPath $($folder.FullName) -NewName $NewName -Force -Verbose -ErrorAction SilentlyContinue
 			$logEntry = $("$Current_timestamp; Renamed directory: '{0}';'{1}' " -f $folder.FullName, $NewName)
 			$myChangeLog.Add($logEntry) | Out-Null
 		}

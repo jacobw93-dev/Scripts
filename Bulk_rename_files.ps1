@@ -50,12 +50,12 @@ cd ($output_folder + "\temp")
 $filesandfolders = Get-ChildItem -recurse | Where-Object { $_.name -match $regex_str1} 
 $filesandfolders | Where-Object {$_.PsIscontainer}  |  foreach {
     $New=(($_.name -Replace $regex_str1,".") -Replace $regex_str2,".") -Replace $regex_str3,'$1';
-    Rename-Item  -Literalpath $_.Fullname -newname $New -passthru
+    Rename-Item  -Literalpath $_.Fullname -newname $New -passthru -Verbose
 }
 $filesandfolders = Get-ChildItem -recurse | Where-Object { $_.name -match $regex_str1}
 $filesandfolders | Where-Object {!$_.PsIscontainer}  |  foreach {
     $New=($_.name -Replace $regex_str1,".") -Replace $regex_str2,".";
-    Rename-Item  -Literalpath $_.Fullname -newname $New -passthru
+    Rename-Item  -Literalpath $_.Fullname -newname $New -passthru -Verbose
 }
 
 $Folder = dir -Recurse -Directory -filter $dir_filter ;
@@ -84,21 +84,21 @@ Foreach ($dir In $Folder)
 			# Trim spaces and rename the file 
             $image_string = $file.fullname.ToString().Trim() 
             #"$split[0] renamed to $replace" 
-            Rename-Item  -LiteralPath "$image_string" "$replace";
+            Rename-Item  -LiteralPath "$image_string" "$replace" -Verbose;
             $i++ 
             } 
         }
 	if ( $Count -eq 1 )
-		{ dir -LiteralPath $current_dir -Recurse -File | where-object {$_.extension -in $fileTypes} | Move-Item -Destination $output_folder -ErrorAction SilentlyContinue}
+		{ dir -LiteralPath $current_dir -Recurse -File | where-object {$_.extension -in $fileTypes} | Move-Item -Destination $output_folder -ErrorAction SilentlyContinue -Verbose}
 	
     }
 
-dir -Recurse -Directory -filter $dir_filter | dir -Recurse -File | where-object {$_.extension -notin $fileTypes} | Remove-Item;
-ls -Directory -filter $dir_filter -recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories()} | Remove-Item;
+dir -Recurse -Directory -filter $dir_filter | dir -Recurse -File | where-object {$_.extension -notin $fileTypes} | Remove-Item -Verbose;
+ls -Directory -filter $dir_filter -recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories()} | Remove-Item -Verbose;
 dir . -Directory -filter $dir_filter | ? { !(gci -LiteralPath $_ -file -recurse | where-object {$_.extension -in $excludedFileTypes}) } | move-item -Destination $output_folder -Verbose;
 
 cd $output_folder
-remove-item ($output_folder + "\temp")
+remove-item ($output_folder + "\temp") -Verbose
 start . ;
 cd $PSScriptRoot
 # exit

@@ -309,7 +309,8 @@ Foreach ($dir In $Folders) {
 			$Total_complete = [math]::Round($Total_files_counter / $Total_files_count * 100)
 			$elapsedTime = $(get-date) - $startTime 
 			$estimatedTotalSeconds = $Total_files_count / $Total_files_counter * $elapsedTime.TotalSeconds 
-			$estimatedTotalSecondsTS = New-TimeSpan -seconds $estimatedTotalSeconds
+			$estimatedTotalSecondsTS = [TimeSpan]::FromSeconds($estimatedTotalSeconds)
+			#$estimatedTotalSecondsTS = New-TimeSpan -seconds $estimatedTotalSeconds
 			$estimatedCompletionTime = $startTime + $estimatedTotalSecondsTS
 			$estimatedCompletionTime = Get-Date -Date $estimatedCompletionTime -Format "yyyy/MM/dd HH:mm:ss"
 			Write-Progress -Id 1 -activity "Estimated Completion Time" -Status "Estimated Completion Time = $estimatedCompletionTime"

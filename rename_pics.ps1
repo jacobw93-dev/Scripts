@@ -136,7 +136,7 @@ function ExtractArchives {
 }
 
 function CleanFilesandFolders {
-	Get-ChildItem -LiteralPath $InputFolder -Directory | Where-Object { !(Get-ChildItem -LiteralPath $_.FullName -file -recurse | where-object { $_.extension -in $excludedFileTypes }) } | Get-ChildItem -File -Recurse | where-Object { $_.extension -notin $fileTypes } | Remove-Item -Verbose;
+	Get-ChildItem -LiteralPath $InputFolder -Directory | Where-Object { !(Get-ChildItem -LiteralPath $_.FullName -file -recurse | where-object { $_.extension -in $excludedFileTypes }) } | Get-ChildItem -File -Recurse | where-Object { $_.extension -notin $fileTypes -or ($_.Name -like '*changelog*' -and $_.Extension -eq '.txt') } | Remove-Item -Verbose;
 	Get-ChildItem $InputFolder -Directory -Recurse | Where-Object { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item -Verbose
 }
 

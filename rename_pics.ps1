@@ -233,19 +233,14 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 			Write-Host "Skipping image with zero width: $picture"
 			continue
 		} else {
+			# Calculate the aspect ratio with high precision
+			$aspectRatio = [math]::Round(($image.Height / $image.Width), 2)
+
 			if (([int]$image.Height.ToString() -le 900) -and ([int]$image.Width.ToString() -le 900)) {
 				$true | Out-Null
 				$LQImagesArray += Get-Item -LiteralPath $picture.FullName
 			}
-			else {
-				$false | Out-Null
-			}
-			
-			# Calculate the aspect ratio with high precision
-			$aspectRatio = [math]::Round(($image.Height / $image.Width), 2)
-
-			# Check if the aspect ratio is greater than or equal to 2
-			if ($aspectRatio -ge 2) {
+			elseif ($aspectRatio -ge 2) {
 				$true | Out-Null
 				$CSImagesArray += Get-Item -LiteralPath $picture.FullName
 			}

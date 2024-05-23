@@ -218,6 +218,7 @@ $ParentFolders = get-ParentFolders -InputValueString "1" -RenModeString $RenMode
 If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 	$i = 0
 	$j = 0
+	$k = 0
 	$image = New-Object -ComObject Wia.ImageFile
 	$pictures = Get-ChildItem -LiteralPath ($ParentFolders.FullName) -recurse -file | where-object { $_.extension -in $fileTypes }
 	$pictures_Count = $pictures.Count
@@ -253,6 +254,7 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 			}
 			
 		}
+		[System.Runtime.InteropServices.Marshal]::ReleaseComObject($image) | Out-Null
 	}
 
 	$LQImages_counter = ($LQImagesArray).Count
@@ -277,9 +279,9 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 		$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 		$destinationFolder = $CSImage.Directory.Parent.FullName + '\' + $ContactSheetsName;
 		$destinationFile = $destinationFolder + '\' + $CSImage.Directory.Name + '_' + $CSImage.Name;
-		$i++
-		$percent = $i / $CSImages_counter * 100  
-		Write-Progress -Activity "Moving CS images..." -CurrentOperation "Current file: `"$($CSImage.Name)`", directory: `"$($CSImage.Directory.Name)`"" -Status "Processing $i of $CSImages_counter" -PercentComplete $percent
+		$k++
+		$percent = $k / $CSImages_counter * 100  
+		Write-Progress -Activity "Moving CS images..." -CurrentOperation "Current file: `"$($CSImage.Name)`", directory: `"$($CSImage.Directory.Name)`"" -Status "Processing $k of $CSImages_counter" -PercentComplete $percent
 		if (-not (Test-Path -Path $destinationFolder -PathType Container)) {
 			New-Item -Path $destinationFolder -ItemType Directory
 		}

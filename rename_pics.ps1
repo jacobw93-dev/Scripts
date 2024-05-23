@@ -11,6 +11,8 @@ $regex_str = '[^0-9A-Za-z\.]+';
 $Date = Get-Date -format "yyyyMMdd_HHmmss"
 $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
 $LowQualityName = 'LQ'
+$ContactSheetsName = 'CS'
+$ExcludedFolderNames = @($LowQualityName,$ContactSheetsName)
 
 Add-Type -AssemblyName System.Windows.Forms
 Set-ItemProperty $key Hidden 1
@@ -83,8 +85,8 @@ function ChangeFoldersNames {
 	return $Chosen
 }
 
-function MoveLowQualityImages {
-	$Chosen = Get-UserChoice -Question "Should I move low quality images to separate directory?"
+function MoveLQandCSImages {
+	$Chosen = Get-UserChoice -Question "Should I move low quality and contact sheet images to separate directory?"
 	return $Chosen
 }
 
@@ -162,7 +164,7 @@ If ( $Total_archives_count -ge 1 ) {
 
 $RenMode = RenameMode
 $Choose = ChangeFoldersNames
-$MoveLQ = MoveLowQualityImages
+$MoveLQCS = MoveLQandCSImages
 
 # Get list of parent folders in root path
 function get-ParentFolders {
@@ -210,9 +212,10 @@ CleanFilesandFolders
 # Get all images with width and height less than 900 px and move them to separate folder
 $myChangeLog = [System.Collections.Generic.List[object]]::new()
 $LQImagesArray = @()
-$ParentFolders = get-ParentFolders -InputValueString "1" -RenModeString $RenMode -InputFolder $InputFolder -excludedFileTypes $excludedFileTypes | where-object { $_.Name -ne "$LowQualityName" }
+$CSImagesArray = @()
+$ParentFolders = get-ParentFolders -InputValueString "1" -RenModeString $RenMode -InputFolder $InputFolder -excludedFileTypes $excludedFileTypes | where-object { $_.Name -notin $ExcludedFolderNames }
 
-If ( ($MoveLQ -eq "1") -and (($ParentFolders).Count -ge 1)) {
+If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 	$i = 0
 	$j = 0
 	$image = New-Object -ComObject Wia.ImageFile
@@ -226,6 +229,13 @@ If ( ($MoveLQ -eq "1") -and (($ParentFolders).Count -ge 1)) {
 		if (([int]$image.Height.ToString() -le 900) -and ([int]$image.Width.ToString() -le 900)) {
 			$true | Out-Null
 			$LQImagesArray += Get-Item -LiteralPath $picture
+		}
+		else {
+			$false | Out-Null
+		}
+		if (([int]$image.Height)/([int]$image.Width) -ge 2) {
+			$true | Out-Null
+			$CSImagesArray += Get-Item -LiteralPath $picture
 		}
 		else {
 			$false | Out-Null
@@ -248,6 +258,23 @@ If ( ($MoveLQ -eq "1") -and (($ParentFolders).Count -ge 1)) {
 		$myChangeLog.Add($logEntry) | Out-Null
 
 	}
+	
+	$CSImages_counter = ($CSImagesArray).Count
+	ForEach ($CSImage in ($CSImagesArray)) {
+		$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
+		$destinationFolder = $CSImage.Directory.Parent.FullName + '\' + $ContactSheetsName;
+		$destinationFile = $destinationFolder + '\' + $CSImage.Directory.Name + '_' + $CSImage.Name;
+		$i++
+		$percent = $i / $CSImages_counter * 100  
+		Write-Progress -Activity "Moving CS images..." -CurrentOperation "Current file: `"$($CSImage.Name)`", directory: `"$($CSImage.Directory.Name)`"" -Status "Processing $i of $CSImages_counter" -PercentComplete $percent
+		if (-not (Test-Path -Path $destinationFolder -PathType Container)) {
+			New-Item -Path $destinationFolder -ItemType Directory
+		}
+		Move-Item -LiteralPath $CSImage.FullName $destinationFile -Force
+		$logEntry = $("$Current_timestamp; Moved file:'{0}';'{1}' " -f $CSImage.FullName, $destinationFile)
+		$myChangeLog.Add($logEntry) | Out-Null
+
+	}
 	$myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 	
 }
@@ -255,7 +282,7 @@ If ( ($MoveLQ -eq "1") -and (($ParentFolders).Count -ge 1)) {
 # Rename Folders
 If ( $Choose -eq "1" ) {
 		
-	$ParentFolders = get-ParentFolders -InputValueString "1" -RenModeString $RenMode -InputFolder $InputFolder -excludedFileTypes $excludedFileTypes | where-object { $_.Name -ne "$LowQualityName" }
+	$ParentFolders = get-ParentFolders -InputValueString "1" -RenModeString $RenMode -InputFolder $InputFolder -excludedFileTypes $excludedFileTypes | where-object { $_.Name -notin $ExcludedFolderNames }
 	$myChangeLog = [System.Collections.Generic.List[object]]::new()
 	$number = $FolderNumerator
 	
@@ -279,7 +306,7 @@ If ( $Choose -eq "1" ) {
 
 }
 	
-$Folders = Get-ChildItem -LiteralPath $InputFolder -Recurse -Directory -exclude "$LowQualityName" | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } ;
+$Folders = Get-ChildItem -LiteralPath $InputFolder -Recurse -Directory | where-object { $_.Name -notin $ExcludedFolderNames } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } ;
 $Total_folder_count = (Get-ChildItem -LiteralPath $InputFolder -Recurse -Directory).Count
 $dir_counter = 0
 $Total_files_count = (Get-ChildItem -Recurse -Directory -LiteralPath "$InputFolder" | Get-ChildItem -File | where-object { $_.extension -in $fileTypes }).Count
@@ -355,6 +382,7 @@ Write-Host -ForegroundColor Blue "Press 'Q' to exit."
 while ($true) {
 	if ($Archives_count -gt 0) {Write-Progress -Id 1 -activity "Total Extraction Progress" -Status "$Archives_count" -PercentComplete 100}
 	if ($LQImages_counter -gt 0) {Write-Progress -Id 2 -parentId 1 -Activity "Moving LQ images..." -Status "$LQImages_counter" -PercentComplete 100}
+	if ($CSImages_counter -gt 0) {Write-Progress -Id 2 -parentId 1 -Activity "Moving CS images..." -Status "$CSImages_counter" -PercentComplete 100}
 	Write-Progress -Id 3 -parentId 2 -activity "Estimated Completion Time" -Status "$estimatedCompletionTime" -PercentComplete 100
 	Write-Progress -Id 4 -parentId 3 -activity "Total Directories" -Status "$Total_folder_count" -PercentComplete 100
 	Write-Progress -Id 5 -parentId 4 -activity "Total Files" -Status "$Total_files_count" -PercentComplete 100

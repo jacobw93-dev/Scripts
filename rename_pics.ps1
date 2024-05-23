@@ -226,19 +226,32 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 		$percent = $j / $pictures_Count * 100 
 		Write-Progress -Activity "Analyzing images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Processing $j of $pictures_Count" -PercentComplete $percent
 		$image.LoadFile($picture.fullname)
-		if (([int]$image.Height.ToString() -le 900) -and ([int]$image.Width.ToString() -le 900)) {
-			$true | Out-Null
-			$LQImagesArray += Get-Item -LiteralPath $picture
-		}
-		else {
-			$false | Out-Null
-		}
-		if (([int]$image.Height)/([int]$image.Width) -ge 2) {
-			$true | Out-Null
-			$CSImagesArray += Get-Item -LiteralPath $picture
-		}
-		else {
-			$false | Out-Null
+		
+		# Check if width is zero to prevent division by zero
+		if ($image.Width -eq 0) {
+			Write-Host "Skipping image with zero width: $picture"
+			continue
+		} else {
+			if (([int]$image.Height.ToString() -le 900) -and ([int]$image.Width.ToString() -le 900)) {
+				$true | Out-Null
+				$LQImagesArray += Get-Item -LiteralPath $picture.FullName
+			}
+			else {
+				$false | Out-Null
+			}
+			
+			# Calculate the aspect ratio with high precision
+			$aspectRatio = [math]::Round(($image.Height / $image.Width), 2)
+
+			# Check if the aspect ratio is greater than or equal to 2
+			if ($aspectRatio -ge 2) {
+				$true | Out-Null
+				$CSImagesArray += Get-Item -LiteralPath $picture.FullName
+			}
+			else {
+				$false | Out-Null
+			}
+			
 		}
 	}
 

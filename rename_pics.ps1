@@ -254,7 +254,6 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 			}
 			
 		}
-		[System.Runtime.InteropServices.Marshal]::ReleaseComObject($image) | Out-Null
 	}
 
 	$LQImages_counter = ($LQImagesArray).Count

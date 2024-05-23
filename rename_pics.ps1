@@ -141,7 +141,7 @@ function CleanFilesandFolders {
         $_.extension -notin $fileTypes -and
         $_.Name -notlike '*changelog*' -and
         $_.Extension -ne '.txt' } | Remove-Item -Verbose
-	Get-ChildItem $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item ;
+	Get-ChildItem $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item -Verbose ;
 }
 
 $Total_archives_count = (Get-ChildItem $InputFolder -file -Recurse | where-object { $_.extension -in $CompressedFileTypes } ).Count

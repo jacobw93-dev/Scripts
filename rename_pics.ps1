@@ -213,87 +213,67 @@ CleanFilesandFolders
 # Get all images with width and height less than 900 px and move them to separate folder
 Add-Type -AssemblyName System.Drawing
 $myChangeLog = [System.Collections.Generic.List[object]]::new()
-$LQImagesArray = @()
-$CSImagesArray = @()
 $ParentFolders = get-ParentFolders -InputValueString "1" -RenModeString $RenMode -InputFolder $InputFolder -excludedFileTypes $excludedFileTypes | where-object { $_.Name -notin $ExcludedFolderNames }
 
 If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 	$i = 0
 	$j = 0
 	$k = 0
-	$image = [System.Drawing.Image]::FromFile($picture.FullName)
+	# $image = [System.Drawing.Image]::FromFile($picture.FullName)
 	$pictures = Get-ChildItem -LiteralPath ($ParentFolders.FullName) -recurse -file | where-object { $_.extension -in $fileTypes }
 	$pictures_Count = $pictures.Count
 	ForEach ($picture in $pictures) {
+		$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 		$j++
-		$percent = $j / $pictures_Count * 100 
-		Write-Progress -Activity "Analyzing images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Processing $j of $pictures_Count" -PercentComplete $percent
+		$percent = [math]::Round($j / $pictures_Count * 100)
+		Write-Progress -Activity "Analyzing images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Processing $j of $pictures_Count ($percent%)" -PercentComplete $percent
 		try {
-			$image = [System.Drawing.Image]::FromFile($picture.FullName)
+			$Image = [System.Drawing.Image]::FromFile($picture.FullName)
+			$Width = $Image.Width
+			$Height = $Image.Height
+			$AspectRatio = $Height / $Width
+			$Image.Dispose()
+
+			# Define conditions
+			$IsLowQuality = ($Width -lt 900 -and $Height -lt 900)
+			$IsContactSheet = ($AspectRatio -ge 2)
 			# Check if width is zero to prevent division by zero
-			if ($image.Width -eq 0) {
-				Write-Host "Skipping image with zero width: $picture"
-				$image.Dispose()
-				continue
+			if ($IsLowQuality) {
+				$destinationFolder = $picture.Directory.Parent.FullName + '\' + $LowQualityName;
+				$destinationFile = $destinationFolder + '\' + $picture.Directory.Name + '_' + $picture.Name;
+				$i++
+				# $percent = $i / $LQImages_counter * 100  
+				Write-Progress -Activity "Moving LQ images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Found $i LQ images"
+				if (-not (Test-Path -Path $destinationFolder -PathType Container)) {
+					New-Item -Path $destinationFolder -ItemType Directory
+				}
+				Move-Item -LiteralPath $picture.FullName $destinationFile -Force
+				$logEntry = $("$Current_timestamp; Moved file:'{0}';'{1}' " -f $picture.FullName, $destinationFile)
+				$myChangeLog.Add($logEntry) | Out-Null
 			}
-			else {
-				# Calculate the aspect ratio with high precision
-				$aspectRatio = [math]::Round(($image.Height / $image.Width), 2)
-	
-				if (([int]$image.Height -le 900) -and ([int]$image.Width -le 900)) {
-					$LQImagesArray += Get-Item -LiteralPath $picture.FullName
+			elseif ($IsContactSheet) {
+				$destinationFolder = $picture.Directory.Parent.FullName + '\' + $ContactSheetsName;
+				$destinationFile = $destinationFolder + '\' + $picture.Directory.Name + '_' + $picture.Name;
+				$k++
+				# $percent = $k / $CSImages_counter * 100  
+				Write-Progress -Activity "Moving CS images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Found $k CS images"
+				if (-not (Test-Path -Path $destinationFolder -PathType Container)) {
+					New-Item -Path $destinationFolder -ItemType Directory
 				}
-				elseif ($aspectRatio -ge 2) {
-					$CSImagesArray += Get-Item -LiteralPath $picture.FullName
-				}
-				else {
-					# Do nothing for images that do not meet criteria
-				}
+				Move-Item -LiteralPath $CSImage.FullName $destinationFile -Force
+				$logEntry = $("$Current_timestamp; Moved file:'{0}';'{1}' " -f $picture.FullName, $destinationFile)
+				$myChangeLog.Add($logEntry) | Out-Null
 			}
 			$image.Dispose()
 		}
 		catch {
-			Write-Host "Failed to process image: $picture"
+			$LogEntry = "Error processing $($File.FullName): $_"
+			$myChangeLog.Add($logEntry) | Out-Null
 		}
 	}
 }
 
-$LQImages_counter = ($LQImagesArray).Count
-ForEach ($LQImage in ($LQImagesArray)) {
-	$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
-	$destinationFolder = $LQImage.Directory.Parent.FullName + '\' + $LowQualityName;
-	$destinationFile = $destinationFolder + '\' + $LQImage.Directory.Name + '_' + $LQImage.Name;
-	$i++
-	$percent = $i / $LQImages_counter * 100  
-	Write-Progress -Activity "Moving LQ images..." -CurrentOperation "Current file: `"$($LQImage.Name)`", directory: `"$($LQImage.Directory.Name)`"" -Status "Processing $i of $LQImages_counter" -PercentComplete $percent
-	if (-not (Test-Path -Path $destinationFolder -PathType Container)) {
-		New-Item -Path $destinationFolder -ItemType Directory
-	}
-	Move-Item -LiteralPath $LQImage.FullName $destinationFile -Force
-	$logEntry = $("$Current_timestamp; Moved file:'{0}';'{1}' " -f $LQImage.FullName, $destinationFile)
-	$myChangeLog.Add($logEntry) | Out-Null
-
-}
-	
-$CSImages_counter = ($CSImagesArray).Count
-ForEach ($CSImage in ($CSImagesArray)) {
-	$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
-	$destinationFolder = $CSImage.Directory.Parent.FullName + '\' + $ContactSheetsName;
-	$destinationFile = $destinationFolder + '\' + $CSImage.Directory.Name + '_' + $CSImage.Name;
-	$k++
-	$percent = $k / $CSImages_counter * 100  
-	Write-Progress -Activity "Moving CS images..." -CurrentOperation "Current file: `"$($CSImage.Name)`", directory: `"$($CSImage.Directory.Name)`"" -Status "Processing $k of $CSImages_counter" -PercentComplete $percent
-	if (-not (Test-Path -Path $destinationFolder -PathType Container)) {
-		New-Item -Path $destinationFolder -ItemType Directory
-	}
-	Move-Item -LiteralPath $CSImage.FullName $destinationFile -Force
-	$logEntry = $("$Current_timestamp; Moved file:'{0}';'{1}' " -f $CSImage.FullName, $destinationFile)
-	$myChangeLog.Add($logEntry) | Out-Null
-
-}
 $myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
-	
-}
 
 # Rename Folders
 If ( $Choose -eq "1" ) {

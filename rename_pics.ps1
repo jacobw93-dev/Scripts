@@ -183,11 +183,6 @@ function get-ParentFolders {
 	return $ParentFolders
 }
 
-
-# Start time
-$startTime = Get-Date
-Write-Host "Start time: $startTime"
-
 CleanFilesandFolders
 
 If ( $Choose -eq "1" ) { $FolderNumerator = SetFolderNumerator }
@@ -209,6 +204,10 @@ ForEach ($Parent in $ParentFolders) {
 $myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 
 CleanFilesandFolders
+
+# Start time
+$startTime = Get-Date
+Write-Host "Start time: $startTime"
 
 # Get all images with width and height less than 900 px and move them to separate folder
 Add-Type -AssemblyName System.Drawing
@@ -243,7 +242,7 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 				$destinationFile = $destinationFolder + '\' + $picture.Directory.Name + '_' + $picture.Name;
 				$i++
 				# $percent = $i / $LQImages_counter * 100  
-				Write-Progress -Activity "Moving LQ images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Found $i LQ images"
+				Write-Verbose -Message "Moving LQ image file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`, Total found $i LQ images" -Verbose
 				if (-not (Test-Path -Path $destinationFolder -PathType Container)) {
 					New-Item -Path $destinationFolder -ItemType Directory
 				}
@@ -256,7 +255,7 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 				$destinationFile = $destinationFolder + '\' + $picture.Directory.Name + '_' + $picture.Name;
 				$k++
 				# $percent = $k / $CSImages_counter * 100  
-				Write-Progress -Activity "Moving CS images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Found $k CS images"
+				Write-Verbose -Message "Moving CS image file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`, Total found $k CS images" -Verbose
 				if (-not (Test-Path -Path $destinationFolder -PathType Container)) {
 					New-Item -Path $destinationFolder -ItemType Directory
 				}

@@ -273,6 +273,8 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 	}
 }
 
+$LQImages_counter = $i
+$CSImages_counter = $k
 $myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 
 # Rename Folders

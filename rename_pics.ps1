@@ -183,6 +183,9 @@ function get-ParentFolders {
 	return $ParentFolders
 }
 
+# Start time
+$startTime = Get-Date
+
 CleanFilesandFolders
 
 If ( $Choose -eq "1" ) { $FolderNumerator = SetFolderNumerator }
@@ -205,9 +208,7 @@ $myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 
 CleanFilesandFolders
 
-# Start time
-$startTime = Get-Date
-Write-Host "Start time: $startTime"
+Write-Host "`nStart time: $startTime"
 
 # Get all images with width and height less than 900 px and move them to separate folder
 Add-Type -AssemblyName System.Drawing
@@ -218,7 +219,6 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 	$i = 0
 	$j = 0
 	$k = 0
-	# $image = [System.Drawing.Image]::FromFile($picture.FullName)
 	$pictures = Get-ChildItem -LiteralPath ($ParentFolders.FullName) -recurse -file | where-object { $_.extension -in $fileTypes }
 	$pictures_Count = $pictures.Count
 	ForEach ($picture in $pictures) {
@@ -241,7 +241,6 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 				$destinationFolder = $picture.Directory.Parent.FullName + '\' + $LowQualityName;
 				$destinationFile = $destinationFolder + '\' + $picture.Directory.Name + '_' + $picture.Name;
 				$i++
-				# $percent = $i / $LQImages_counter * 100  
 				Write-Verbose -Message "Moving LQ image file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`, Total found $i LQ images" -Verbose
 				if (-not (Test-Path -Path $destinationFolder -PathType Container)) {
 					New-Item -Path $destinationFolder -ItemType Directory
@@ -254,7 +253,6 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 				$destinationFolder = $picture.Directory.Parent.FullName + '\' + $ContactSheetsName;
 				$destinationFile = $destinationFolder + '\' + $picture.Directory.Name + '_' + $picture.Name;
 				$k++
-				# $percent = $k / $CSImages_counter * 100  
 				Write-Verbose -Message "Moving CS image file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`, Total found $k CS images" -Verbose
 				if (-not (Test-Path -Path $destinationFolder -PathType Container)) {
 					New-Item -Path $destinationFolder -ItemType Directory
@@ -317,8 +315,6 @@ Foreach ($dir In $Folders) {
 	$dir_counter++
 	$Total_dir_complete = [math]::Round($dir_counter / $Total_folder_count * 100)
 	Write-Progress -Id 2 -parentId 1 -activity "Total Directories" -CurrentOperation "Current directory: '$dir'" -Status "Processing $dir_counter of $Total_folder_count ($Total_dir_complete%)" -PercentComplete $Total_dir_complete
-	# $current_dir = (Get-Location).path + '\' + $dir;
-
 	# Set default value for addition to file name
 	$counter = 1
 	$newdir = $dir.name
@@ -338,7 +334,6 @@ Foreach ($dir In $Folders) {
 			$elapsedTime = $(get-date) - $startTime 
 			$estimatedTotalSeconds = $Total_files_count / $Total_files_counter * $elapsedTime.TotalSeconds 
 			$estimatedTotalSecondsTS = [TimeSpan]::FromSeconds($estimatedTotalSeconds)
-			#$estimatedTotalSecondsTS = New-TimeSpan -seconds $estimatedTotalSeconds
 			$estimatedCompletionTime = $startTime + $estimatedTotalSecondsTS
 			$estimatedCompletionTime = Get-Date -Date $estimatedCompletionTime -Format "yyyy/MM/dd HH:mm:ss"
 			Write-Progress -Id 1 -activity "Estimated Completion Time" -Status "Estimated Completion Time = $estimatedCompletionTime"

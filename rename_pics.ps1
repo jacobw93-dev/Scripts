@@ -26,7 +26,7 @@ $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @
 
 if ($FolderBrowser.ShowDialog() -eq 'OK') {
 	$InputFolder = $FolderBrowser.SelectedPath
-	Write-Host -ForegroundColor Green "Selected folder:`n"
+	Write-Host -ForegroundColor Green "`nSelected folder:"
 	Write-Host "$InputFolder"
 }
 else {

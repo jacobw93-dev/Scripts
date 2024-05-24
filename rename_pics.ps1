@@ -186,6 +186,7 @@ function get-ParentFolders {
 
 # Start time
 $startTime = Get-Date
+Write-Host "Start time: $startTime"
 
 CleanFilesandFolders
 
@@ -226,29 +227,31 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 		$j++
 		$percent = $j / $pictures_Count * 100 
 		Write-Progress -Activity "Analyzing images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Processing $j of $pictures_Count" -PercentComplete $percent
-		$image.LoadFile($picture.fullname)
-		
-		# Check if width is zero to prevent division by zero
-		if ($image.Width -eq 0) {
-			Write-Host "Skipping image with zero width: $picture"
-			continue
-		} else {
-			# Calculate the aspect ratio with high precision
-			$aspectRatio = [math]::Round(($image.Height / $image.Width), 2)
+		try {
+			$image.LoadFile($picture.fullname)
+			# Check if width is zero to prevent division by zero
+			if ($image.Width -eq 0) {
+				Write-Host "Skipping image with zero width: $picture"
+				continue
+			} else {
+				# Calculate the aspect ratio with high precision
+				$aspectRatio = [math]::Round(($image.Height / $image.Width), 2)
 
-			if (([int]$image.Height.ToString() -le 900) -and ([int]$image.Width.ToString() -le 900)) {
-				$true | Out-Null
-				$LQImagesArray += Get-Item -LiteralPath $picture.FullName
+				if (([int]$image.Height.ToString() -le 900) -and ([int]$image.Width.ToString() -le 900)) {
+					$true | Out-Null
+					$LQImagesArray += Get-Item -LiteralPath $picture.FullName
+				}
+				elseif ($aspectRatio -ge 2) {
+					$true | Out-Null
+					$CSImagesArray += Get-Item -LiteralPath $picture.FullName
+				}
+				else {
+					$false | Out-Null
+				}
+				
 			}
-			elseif ($aspectRatio -ge 2) {
-				$true | Out-Null
-				$CSImagesArray += Get-Item -LiteralPath $picture.FullName
-			}
-			else {
-				$false | Out-Null
-			}
-			
 		}
+		catch {}
 	}
 
 	$LQImages_counter = ($LQImagesArray).Count

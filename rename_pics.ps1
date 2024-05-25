@@ -225,11 +225,13 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 	$k = 0
 	$pictures = Get-ChildItem -LiteralPath ($ParentFolders.FullName) -recurse -file | where-object { $_.extension -in $fileTypes }
 	$pictures_Count = $pictures.Count
+	$formatted_Count = "{0:N0}" -f $pictures_Count
+	$formatted_Count = $formatted_Count -replace ",", " "
 	ForEach ($picture in $pictures) {
 		$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 		$j++
 		$percent = [math]::Round($j / $pictures_Count * 100)
-		Write-Progress -Id 1  -Activity "Analyzing images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Processing $j of $pictures_Count ($percent%)" -PercentComplete $percent
+		Write-Progress -Id 1  -Activity "Analyzing images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Processing $j of $formatted_Count ($percent%)" -PercentComplete $percent
 		Write-Progress -Id 2 -parentId 1 -Activity "Moving LQ images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Found $i LQ images"
 		Write-Progress -Id 3 -parentId 1 -Activity "Moving CS images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Found $k CS images"
 		try {

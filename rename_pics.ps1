@@ -229,9 +229,9 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 		$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 		$j++
 		$percent = [math]::Round($j / $pictures_Count * 100)
-		Write-Progress -Activity "Analyzing images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Processing $j of $pictures_Count ($percent%)" -PercentComplete $percent
-		Write-Progress -Activity "Moving LQ images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Found $i LQ images"
-		Write-Progress -Activity "Moving CS images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Found $k CS images"
+		Write-Progress -Id 1  -Activity "Analyzing images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Processing $j of $pictures_Count ($percent%)" -PercentComplete $percent
+		Write-Progress -Id 2 -parentId 1 -Activity "Moving LQ images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Found $i LQ images"
+		Write-Progress -Id 3 -parentId 1 -Activity "Moving CS images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Found $k CS images"
 		try {
 			$Image = [System.Drawing.Image]::FromFile($picture.FullName)
 			$Width = $Image.Width

@@ -19,21 +19,25 @@ Set-ItemProperty $key Hidden 1
 Set-ItemProperty $key ShowSuperHidden 1
 # Stop-Process -processname explorer
 
-$FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
-	SelectedPath = 'D:\Downloads\Pics\'
-	Description  = "Select a directory containing images"
-}
+function SelectInputFolder {
+	$FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
+		SelectedPath = 'D:\Downloads\Pics\'
+		Description  = "Select a directory containing images"
+	}
 
-if ($FolderBrowser.ShowDialog() -eq 'OK') {
-	$InputFolder = $FolderBrowser.SelectedPath
-	Write-Host -ForegroundColor Green "`nSelected folder:"
-	Write-Host "$InputFolder"
+	if ($FolderBrowser.ShowDialog() -eq 'OK') {
+		$InputFolder = $FolderBrowser.SelectedPath
+		Write-Host -ForegroundColor Green "`nSelected folder:"
+		Write-Host "$InputFolder"
+		return $InputFolder
+	}
+	else {
+		Write-Host -ForegroundColor Red "User cancelled the operation."
+		Pause
+		Exit
+	}
 }
-else {
-	Write-Host -ForegroundColor Red "User cancelled the operation."
-	Pause
-	Exit
-}
+$InputFolder = SelectInputFolder
 
 Set-ItemProperty $key Hidden 0
 Set-ItemProperty $key ShowSuperHidden 0
@@ -226,6 +230,8 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 		$j++
 		$percent = [math]::Round($j / $pictures_Count * 100)
 		Write-Progress -Activity "Analyzing images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Processing $j of $pictures_Count ($percent%)" -PercentComplete $percent
+		Write-Progress -Activity "Moving LQ images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Found $i LQ images"
+		Write-Progress -Activity "Moving CS images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Found $k CS images"
 		try {
 			$Image = [System.Drawing.Image]::FromFile($picture.FullName)
 			$Width = $Image.Width
@@ -238,10 +244,9 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 			$IsContactSheet = ($AspectRatio -ge 2)
 			# Check if width is zero to prevent division by zero
 			if ($IsLowQuality) {
+				$i++
 				$destinationFolder = $picture.Directory.Parent.FullName + '\' + $LowQualityName;
 				$destinationFile = $destinationFolder + '\' + $picture.Directory.Name + '_' + $picture.Name;
-				$i++
-				Write-Verbose -Message "Moving LQ image file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`, Total found $i LQ images" -Verbose
 				if (-not (Test-Path -Path $destinationFolder -PathType Container)) {
 					New-Item -Path $destinationFolder -ItemType Directory
 				}
@@ -250,10 +255,9 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 				$myChangeLog.Add($logEntry) | Out-Null
 			}
 			elseif ($IsContactSheet) {
+				$k++
 				$destinationFolder = $picture.Directory.Parent.FullName + '\' + $ContactSheetsName;
 				$destinationFile = $destinationFolder + '\' + $picture.Directory.Name + '_' + $picture.Name;
-				$k++
-				Write-Verbose -Message "Moving CS image file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`, Total found $k CS images" -Verbose
 				if (-not (Test-Path -Path $destinationFolder -PathType Container)) {
 					New-Item -Path $destinationFolder -ItemType Directory
 				}

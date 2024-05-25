@@ -32,7 +32,7 @@ function SelectInputFolder {
 		return $InputFolder
 	}
 	else {
-		Write-Host -ForegroundColor Red "User cancelled the operation."
+		Write-Host -ForegroundColor Red "`nUser cancelled the operation."
 		Pause
 		Exit
 	}

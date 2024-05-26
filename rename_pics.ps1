@@ -2,7 +2,7 @@ $Host.UI.RawUI.WindowTitle = "Batch rename images"
 $Host.UI.RawUI.ForegroundColor = "White"
 $Host.PrivateData.ProgressBackgroundColor = 'Magenta'
 $Host.PrivateData.ProgressForegroundColor = 'Black'
-# $PSStyle.Progress.View = 'Minimal'
+$PSStyle.Progress.View = 'Classic'
 
 $fileTypes = @('.jpeg', '.jpg', '.png')
 $excludedFileTypes = @('.!qb', '.part', '.zip', '.rar')

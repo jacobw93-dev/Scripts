@@ -190,10 +190,10 @@ function get-ParentFolders {
 # Start time
 $startTime = Get-Date
 
-CleanFilesandFolders
-
 If ( $Choose -eq "1" ) { $FolderNumerator = SetFolderNumerator }
 If ( $Total_archives_count -ge 1 ) { ExtractArchives }
+
+CleanFilesandFolders
 	
 $ParentFolders = get-ParentFolders -InputValueString "1" -RenModeString $RenMode -InputFolder $InputFolder -excludedFileTypes $excludedFileTypes
 
@@ -275,6 +275,7 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 		}
 	}
 }
+CleanFilesandFolders
 
 $LQImages_counter = $i
 $CSImages_counter = $k
@@ -308,7 +309,8 @@ If ( $Choose -eq "1" ) {
 	$myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 
 }
-	
+CleanFilesandFolders
+
 $Folders = Get-ChildItem -LiteralPath $InputFolder -Recurse -Directory | where-object { $_.Name -notin $ExcludedFolderNames } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } ;
 $Total_folder_count = (Get-ChildItem -LiteralPath $InputFolder -Recurse -Directory).Count
 $dir_counter = 0
@@ -395,31 +397,42 @@ $smtpTo = "jacob.w93@gmail.com"
 $messageSubject = "Script execution is complete"
 $messageBody = "The `"rename_pics.ps1`" script execution for input folder `"$InputFolder`" is complete. Please find attached changelog"
 
-$key = "5243428937038590"
-# Convert key and IV to byte arrays (ensure 128-bit key length)
+# Define the key (16 bytes for 128-bit key)
+$key = "5243428937038590"  # 16 characters
+
+# Define the encrypted password
+$encryptedPassword = $smtpPass
+
+# Convert the key and encrypted password to byte arrays
 $keyBytes = [System.Text.Encoding]::UTF8.GetBytes($key)
+$encryptedBytes = [Convert]::FromBase64String($encryptedPassword)
 
-# Convert the encrypted password from Base64 to byte array
-$encryptedBytes = [Convert]::FromBase64String($smtpPass) | Out-Null
+# Create AES encryption provider
+$aesProvider = New-Object System.Security.Cryptography.AesCryptoServiceProvider
+$aesProvider.KeySize = 128
+$aesProvider.Key = $keyBytes
 
-# Create AES object
-$aes = [System.Security.Cryptography.Aes]::Create()
-$aes.Key = $keyBytes
-$aes.Mode = [System.Security.Cryptography.CipherMode]::CBC
+# Set padding mode to None
+$aesProvider.Padding = [System.Security.Cryptography.PaddingMode]::None
+
+# Set decryption mode to CBC (Cipher Block Chaining)
+$aesProvider.Mode = [System.Security.Cryptography.CipherMode]::CBC
+
+# Set the IV (Initialization Vector) to zeros
+$aesProvider.IV = [byte[]]::new(16)  # 16 bytes for 128-bit IV
 
 # Create decryptor
-$decryptor = $aes.CreateDecryptor($aes.Key) | Out-Null
+$decryptor = $aesProvider.CreateDecryptor()
 
 # Decrypt the password
-$memoryStream = New-Object System.IO.MemoryStream($encryptedBytes) | Out-Null
-$cryptoStream = New-Object System.Security.Cryptography.CryptoStream($memoryStream, $decryptor, [System.Security.Cryptography.CryptoStreamMode]::Read) | Out-Null
-$decryptedBytes = New-Object byte[] $encryptedBytes.Length
-$decryptedByteCount = $cryptoStream.Read($decryptedBytes, 0, $decryptedBytes.Length) | Out-Null
-$decryptedPassword = [System.Text.Encoding]::UTF8.GetString($decryptedBytes, 0, $decryptedByteCount)
-
-# Cleanup
-$cryptoStream.Close() | Out-Null
-$memoryStream.Close() | Out-Null
+try {
+    $decryptedBytes = $decryptor.TransformFinalBlock($encryptedBytes, 0, $encryptedBytes.Length)
+    
+    # Convert decrypted bytes to string
+    $decryptedPassword = [System.Text.Encoding]::UTF8.GetString($decryptedBytes)
+} catch {
+    Write-Host "Decryption failed: $_"
+}
 
 # Create a secure string for the password
 $securePass = ConvertTo-SecureString $decryptedPassword -AsPlainText -Force

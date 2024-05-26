@@ -190,10 +190,10 @@ function get-ParentFolders {
 # Start time
 $startTime = Get-Date
 
-CleanFilesandFolders
-
 If ( $Choose -eq "1" ) { $FolderNumerator = SetFolderNumerator }
 If ( $Total_archives_count -ge 1 ) { ExtractArchives }
+
+CleanFilesandFolders
 	
 $ParentFolders = get-ParentFolders -InputValueString "1" -RenModeString $RenMode -InputFolder $InputFolder -excludedFileTypes $excludedFileTypes
 
@@ -275,6 +275,7 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 		}
 	}
 }
+CleanFilesandFolders
 
 $LQImages_counter = $i
 $CSImages_counter = $k
@@ -308,7 +309,8 @@ If ( $Choose -eq "1" ) {
 	$myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 
 }
-	
+CleanFilesandFolders
+
 $Folders = Get-ChildItem -LiteralPath $InputFolder -Recurse -Directory | where-object { $_.Name -notin $ExcludedFolderNames } | sort-object { [regex]::Replace($_, '\d+', { $args[0].Value.PadLeft(100) }) } ;
 $Total_folder_count = (Get-ChildItem -LiteralPath $InputFolder -Recurse -Directory).Count
 $dir_counter = 0
@@ -379,9 +381,69 @@ $processTime = $endTime - $startTime
 $processTimeFormatted = '{0:hh\:mm\:ss}' -f $processTime
 
 clear-host
+
 # Write process time to console
 Write-Host -ForegroundColor Green "Process time: $processTimeFormatted (hh:mm:ss)"
+"`nProcess time: $processTimeFormatted (hh:mm:ss)" | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 
+# SMTP server credentials
+$smtpUser = "my.own.notifiy@outlook.com"
+$smtpPass = "18lsWgG/EtqPwhANosIIyuPOJ8y/IHXWXBAw2z1V2vY="
+
+# Send email notification
+$smtpServer = "smtp-mail.outlook.com"
+$smtpFrom = $smtpUser
+$smtpTo = "jacob.w93@gmail.com"
+$messageSubject = "Script execution is complete"
+$messageBody = "The `"rename_pics.ps1`" script execution for input folder `"$InputFolder`" is complete. Please find attached changelog"
+
+# Define the key (16 bytes for 128-bit key)
+$key = "5243428937038590"  # 16 characters
+
+# Define the encrypted password
+$encryptedPassword = $smtpPass
+
+# Convert the key and encrypted password to byte arrays
+$keyBytes = [System.Text.Encoding]::UTF8.GetBytes($key)
+$encryptedBytes = [Convert]::FromBase64String($encryptedPassword)
+
+# Create AES encryption provider
+$aesProvider = New-Object System.Security.Cryptography.AesCryptoServiceProvider
+$aesProvider.KeySize = 128
+$aesProvider.Key = $keyBytes
+
+# Set padding mode to None
+$aesProvider.Padding = [System.Security.Cryptography.PaddingMode]::None
+
+# Set decryption mode to CBC (Cipher Block Chaining)
+$aesProvider.Mode = [System.Security.Cryptography.CipherMode]::CBC
+
+# Set the IV (Initialization Vector) to zeros
+$aesProvider.IV = [byte[]]::new(16)  # 16 bytes for 128-bit IV
+
+# Create decryptor
+$decryptor = $aesProvider.CreateDecryptor()
+
+# Decrypt the password
+try {
+    $decryptedBytes = $decryptor.TransformFinalBlock($encryptedBytes, 0, $encryptedBytes.Length)
+    
+    # Convert decrypted bytes to string
+    $decryptedPassword = [System.Text.Encoding]::UTF8.GetString($decryptedBytes)
+} catch {
+    Write-Host "Decryption failed: $_"
+}
+
+# Create a secure string for the password
+$securePass = ConvertTo-SecureString $decryptedPassword -AsPlainText -Force
+
+# Create a credential object
+$credential = New-Object System.Management.Automation.PSCredential ($smtpUser, $securePass)
+
+# Send email using port 587 for TLS
+Send-MailMessage -From $smtpFrom -To $smtpTo -Subject $messageSubject -Body $messageBody -Attachments "$changelog_FullName" -SmtpServer $smtpServer -Credential $credential -UseSsl -Port 587
+
+$q = 0
 Write-Host -ForegroundColor Blue "Press 'Q' to exit."
 while ($true) {
 	Write-Progress -Id 1 -activity "Estimated Completion Time" -Status "$estimatedCompletionTime" -PercentComplete 100
@@ -400,6 +462,9 @@ while ($true) {
 			break
 		}
 	}
+	if ($q -eq 0) {
+		# Shut down the computer
+		shutdown -s -f -t 60
+	}
+	$q++
 }
-
-"`nProcess time: $processTimeFormatted (hh:mm:ss)" | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;

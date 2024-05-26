@@ -382,6 +382,32 @@ clear-host
 # Write process time to console
 Write-Host -ForegroundColor Green "Process time: $processTimeFormatted (hh:mm:ss)"
 
+# SMTP server credentials
+$smtpUser = "qbittorrent_notify@outlook.com"
+$smtpPass = "hg9eVeV9SW@+tTS5w`$Y*he^X"
+
+# Send email notification
+$smtpServer = "smtp-mail.outlook.com"
+$smtpFrom = "qbittorrent_notify@outlook.com"
+$smtpTo = "jacob.w93@gmail.com"
+$messageSubject = "Script Completed"
+$messageBody = "The rename_pics.ps1 script has finished running."
+
+# Create a secure string for the password
+$securePass = ConvertTo-SecureString $smtpPass -AsPlainText -Force
+
+# Create a credential object
+$credential = New-Object System.Management.Automation.PSCredential ($smtpUser, $securePass)
+
+# Send email using port 587 for TLS
+Send-MailMessage -From $smtpFrom -To $smtpTo -Subject $messageSubject -Body $messageBody -SmtpServer $smtpServer -Credential $credential -UseSsl -Port 587
+
+# Shut down the computer
+Start-Sleep -Seconds 10
+
+# Shut down the computer
+Stop-Computer -Force
+
 Write-Host -ForegroundColor Blue "Press 'Q' to exit."
 while ($true) {
 	Write-Progress -Id 1 -activity "Estimated Completion Time" -Status "$estimatedCompletionTime" -PercentComplete 100

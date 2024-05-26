@@ -147,7 +147,7 @@ function CleanFilesandFolders {
 		$_.extension -notin $fileTypes -and
 		$_.Name -notlike '*changelog*' -and
 		$_.Extension -ne '.txt' } | Remove-Item -Verbose
-	Get-ChildItem $InputFolder -Directory -Recurse | where { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item -Verbose ;
+	Get-ChildItem $InputFolder -Directory -Recurse | Where-Object { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item -Verbose ;
 }
 
 $Total_archives_count = (Get-ChildItem $InputFolder -file -Recurse | where-object { $_.extension -in $CompressedFileTypes } ).Count
@@ -225,13 +225,13 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 	$k = 0
 	$pictures = Get-ChildItem -LiteralPath ($ParentFolders.FullName) -recurse -file | where-object { $_.extension -in $fileTypes }
 	$pictures_Count = $pictures.Count
-	$formatted_Count = "{0:N0}" -f $pictures_Count
-	$formatted_Count = $formatted_Count -replace ",", " "
+	$pictures_Count_formatted = "{0:N0}" -f $pictures_Count
+	$pictures_Count_formatted = $pictures_Count_formatted -replace ",", " "
 	ForEach ($picture in $pictures) {
 		$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 		$j++
 		$percent = [math]::Round($j / $pictures_Count * 100)
-		Write-Progress -Id 1  -Activity "Analyzing images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Processing $j of $formatted_Count ($percent%)" -PercentComplete $percent
+		Write-Progress -Id 1  -Activity "Analyzing images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Processing $j of $pictures_Count_formatted ($percent%)" -PercentComplete $percent
 		Write-Progress -Id 2 -parentId 1 -Activity "Moving LQ images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Found $i LQ images"
 		Write-Progress -Id 3 -parentId 1 -Activity "Moving CS images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Found $k CS images"
 		try {
@@ -313,6 +313,8 @@ $Folders = Get-ChildItem -LiteralPath $InputFolder -Recurse -Directory | where-o
 $Total_folder_count = (Get-ChildItem -LiteralPath $InputFolder -Recurse -Directory).Count
 $dir_counter = 0
 $Total_files_count = (Get-ChildItem -Recurse -Directory -LiteralPath "$InputFolder" | Get-ChildItem -File | where-object { $_.extension -in $fileTypes }).Count
+$Total_files_count_formatted = "{0:N0}" -f $Total_files_count
+$Total_files_count_formatted = $Total_files_count_formatted -replace ",", " "
 $Total_files_counter = 0
 
 # $startTime_ProgressBar = get-date
@@ -322,7 +324,7 @@ $myChangeLog = [System.Collections.Generic.List[object]]::new()
 Foreach ($dir In $Folders) {
 	$dir_counter++
 	$Total_dir_complete = [math]::Round($dir_counter / $Total_folder_count * 100)
-	Write-Progress -Id 2 -parentId 1 -activity "Total Directories" -CurrentOperation "Current directory: '$dir'" -Status "Processing $dir_counter of $Total_folder_count ($Total_dir_complete%)" -PercentComplete $Total_dir_complete
+	Write-Progress -Id 3 -parentId 1 -activity "Total Directories" -CurrentOperation "Current directory: '$dir'" -Status "Processing $dir_counter of $Total_folder_count ($Total_dir_complete%)" -PercentComplete $Total_dir_complete
 	# Set default value for addition to file name
 	$counter = 1
 	$newdir = $dir.name
@@ -345,7 +347,7 @@ Foreach ($dir In $Folders) {
 			$estimatedCompletionTime = $startTime + $estimatedTotalSecondsTS
 			$estimatedCompletionTime = Get-Date -Date $estimatedCompletionTime -Format "yyyy/MM/dd HH:mm:ss"
 			Write-Progress -Id 1 -activity "Estimated Completion Time" -Status "Estimated Completion Time = $estimatedCompletionTime"
-			Write-Progress -Id 3 -parentId 2 -activity "Total Files" -CurrentOperation "Current file: '$file'" -Status "Processing $Total_files_counter of $Total_files_count ($Total_complete%)" -PercentComplete $Total_complete
+			Write-Progress -Id 2 -parentId 1 -activity "Total Files" -CurrentOperation "Current file: '$file'" -Status "Processing $Total_files_counter of $Total_files_count_formatted ($Total_complete%)" -PercentComplete $Total_complete
 			$Folder_Complete = [math]::Round($dir_files_counter / $files_count * 100)
 			Write-Progress -Id 4 -parentId 3 -activity "Current Folder Files" -CurrentOperation "Current file: '$file'" -Status "Processing $dir_files_counter of $files_count ($Folder_Complete%)" -PercentComplete $Folder_Complete
 			$replace = $newdir + "_" + $zero + ($counter.ToString().PadLeft($PaddingLength, '0')) + "." + $extension

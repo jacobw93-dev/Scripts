@@ -350,12 +350,14 @@ Foreach ($dir In $Folders) {
 			Write-Progress -Id 2 -parentId 1 -activity "Total Files" -CurrentOperation "Current file: '$file'" -Status "Processing $Total_files_counter of $Total_files_count_formatted ($Total_complete%)" -PercentComplete $Total_complete
 			$Folder_Complete = [math]::Round($dir_files_counter / $files_count * 100)
 			Write-Progress -Id 4 -parentId 3 -activity "Current Folder Files" -CurrentOperation "Current file: '$file'" -Status "Processing $dir_files_counter of $files_count ($Folder_Complete%)" -PercentComplete $Folder_Complete
-			$replace = $newdir + "_" + $zero + ($counter.ToString().PadLeft($PaddingLength, '0')) + "." + $extension
+			$temporary = ($counter.ToString().PadLeft($PaddingLength, '0')) + "." + $extension
+			$replace = $newdir + "_" + $temporary
 			# Trim spaces and rename the file
 			$image_string = $file.fullname.ToString().Trim()
 			# "$split[0] renamed to $replace"
 			$replace = (($replace -Replace $regex_str, ".") -replace '\.+', '.');
-			Rename-Item -LiteralPath "$image_string" "$replace";
+			Rename-Item -LiteralPath "$image_string" "$temporary";
+			Rename-Item -LiteralPath ($($file.DirectoryName) + "\" + $temporary) "$replace";
 			$logEntry = $("$Current_timestamp; Renamed file: '{0}';'{1}'" -f $image_string, $replace)
 			$myChangeLog.Add($logEntry) | Out-Null
 			$counter++

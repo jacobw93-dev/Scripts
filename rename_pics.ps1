@@ -386,8 +386,8 @@ while ($true) {
 	Write-Progress -Id 2 -parentId 1 -activity "Total Directories" -Status "$Total_folder_count" -PercentComplete 100
 	Write-Progress -Id 3 -parentId 1 -activity "Total Files" -Status "$Total_files_count" -PercentComplete 100
 	if ($Archives_count -gt 0) { Write-Progress -Id 4 -parentId 1 -activity "Total Extraction Progress" -Status "$Archives_count" -PercentComplete 100 }
-	if ($LQImages_counter -gt 0) { Write-Progress -Id 5 -parentId 4 -Activity "Moved LQ images..." -Status "$LQImages_counter" -PercentComplete 100 }
-	if ($CSImages_counter -gt 0) { Write-Progress -Id 6 -parentId 4 -Activity "Moved CS images..." -Status "$CSImages_counter" -PercentComplete 100 }
+	if ($LQImages_counter -gt 0) { Write-Progress -Id 5 -parentId 4 -Activity "Total found LQ images..." -Status "$LQImages_counter" -PercentComplete 100 }
+	if ($CSImages_counter -gt 0) { Write-Progress -Id 6 -parentId 4 -Activity "Total found CS images..." -Status "$CSImages_counter" -PercentComplete 100 }
 	# Write-Progress -Id 6 -parentId 5 -activity "Current Folder Files" -Status "Completed" -PercentComplete 100
 	Start-Sleep -Milliseconds 250
 

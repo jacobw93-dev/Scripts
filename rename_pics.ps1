@@ -379,35 +379,58 @@ $processTime = $endTime - $startTime
 $processTimeFormatted = '{0:hh\:mm\:ss}' -f $processTime
 
 clear-host
+
 # Write process time to console
 Write-Host -ForegroundColor Green "Process time: $processTimeFormatted (hh:mm:ss)"
+"`nProcess time: $processTimeFormatted (hh:mm:ss)" | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 
 # SMTP server credentials
-$smtpUser = "qbittorrent_notify@outlook.com"
-$smtpPass = "hg9eVeV9SW@+tTS5w`$Y*he^X"
+$smtpUser = "my.own.notifiy@outlook.com"
+$smtpPass = "18lsWgG/EtqPwhANosIIyuPOJ8y/IHXWXBAw2z1V2vY="
 
 # Send email notification
 $smtpServer = "smtp-mail.outlook.com"
-$smtpFrom = "qbittorrent_notify@outlook.com"
+$smtpFrom = $smtpUser
 $smtpTo = "jacob.w93@gmail.com"
-$messageSubject = "Script Completed"
-$messageBody = "The rename_pics.ps1 script has finished running."
+$messageSubject = "Script execution is complete"
+$messageBody = "The `"rename_pics.ps1`" script execution for input folder `"$InputFolder`" is complete. Please find attached changelog"
+
+$key = "5243428937038590"
+# Convert key and IV to byte arrays (ensure 128-bit key length)
+$keyBytes = [System.Text.Encoding]::UTF8.GetBytes($key)
+
+# Convert the encrypted password from Base64 to byte array
+$encryptedBytes = [Convert]::FromBase64String($smtpPass) | Out-Null
+
+# Create AES object
+$aes = [System.Security.Cryptography.Aes]::Create()
+$aes.Key = $keyBytes
+$aes.Mode = [System.Security.Cryptography.CipherMode]::CBC
+
+# Create decryptor
+$decryptor = $aes.CreateDecryptor($aes.Key) | Out-Null
+
+# Decrypt the password
+$memoryStream = New-Object System.IO.MemoryStream($encryptedBytes) | Out-Null
+$cryptoStream = New-Object System.Security.Cryptography.CryptoStream($memoryStream, $decryptor, [System.Security.Cryptography.CryptoStreamMode]::Read) | Out-Null
+$decryptedBytes = New-Object byte[] $encryptedBytes.Length
+$decryptedByteCount = $cryptoStream.Read($decryptedBytes, 0, $decryptedBytes.Length) | Out-Null
+$decryptedPassword = [System.Text.Encoding]::UTF8.GetString($decryptedBytes, 0, $decryptedByteCount)
+
+# Cleanup
+$cryptoStream.Close() | Out-Null
+$memoryStream.Close() | Out-Null
 
 # Create a secure string for the password
-$securePass = ConvertTo-SecureString $smtpPass -AsPlainText -Force
+$securePass = ConvertTo-SecureString $decryptedPassword -AsPlainText -Force
 
 # Create a credential object
 $credential = New-Object System.Management.Automation.PSCredential ($smtpUser, $securePass)
 
 # Send email using port 587 for TLS
-Send-MailMessage -From $smtpFrom -To $smtpTo -Subject $messageSubject -Body $messageBody -SmtpServer $smtpServer -Credential $credential -UseSsl -Port 587
+Send-MailMessage -From $smtpFrom -To $smtpTo -Subject $messageSubject -Body $messageBody -Attachments "$changelog_FullName" -SmtpServer $smtpServer -Credential $credential -UseSsl -Port 587
 
-# Shut down the computer
-Start-Sleep -Seconds 10
-
-# Shut down the computer
-Stop-Computer -Force
-
+$q = 0
 Write-Host -ForegroundColor Blue "Press 'Q' to exit."
 while ($true) {
 	Write-Progress -Id 1 -activity "Estimated Completion Time" -Status "$estimatedCompletionTime" -PercentComplete 100
@@ -426,6 +449,9 @@ while ($true) {
 			break
 		}
 	}
+	if ($q -eq 0) {
+		# Shut down the computer
+		shutdown -s -f -t 60
+	}
+	$q++
 }
-
-"`nProcess time: $processTimeFormatted (hh:mm:ss)" | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;

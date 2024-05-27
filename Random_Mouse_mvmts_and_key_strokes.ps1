@@ -1,131 +1,129 @@
-Add-Type -TypeDefinition @"
-using System;
-using System.Runtime.InteropServices;
-public class UserInput
-{
-[DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
-public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
-[DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
-public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, uint dwExtraInfo);
-public const int MOUSEEVENTF_MOVE = 0x0001;
-public const int MOUSEEVENTF_LEFTDOWN = 0x0002;
-public const int MOUSEEVENTF_LEFTUP = 0x0004;
-public const int MOUSEEVENTF_RIGHTDOWN = 0x0008;
-public const int MOUSEEVENTF_RIGHTUP = 0x0010;
-public const int MOUSEEVENTF_MIDDLEDOWN = 0x0020;
-public const int MOUSEEVENTF_MIDDLEUP = 0x0040;
-public const int MOUSEEVENTF_ABSOLUTE = 0x8000;
-public const int KEYEVENTF_KEYDOWN = 0x0000;
-public const int KEYEVENTF_KEYUP = 0x0002;
-public static void MoveMouse(int xDelta, int yDelta)
-{
-mouse_event(MOUSEEVENTF_MOVE, (uint)xDelta, (uint)yDelta, 0, 0);
-}
-public static void ClickLeftMouseButton()
-{
-mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-}
-public static void ClickRightMouseButton()
-{
-mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
-mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
-}
-public static void PressKey(byte keyCode)
-{
-keybd_event(keyCode, 0, KEYEVENTF_KEYDOWN, 0);
-keybd_event(keyCode, 0, KEYEVENTF_KEYUP, 0);
-}
-}
-"@
+# Load necessary .NET assemblies for mouse and keyboard actions
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
 
-function GenerateRandomMovement
-	{
-	$maxMouseDelta = 50 # Maksymalna odległość o jaką poruszy się myszka (w pikselach)
-	$maxKeyPresses = 10 # Maksymalna liczba naciśnięć klawisza
-	$random = New-Object System.Random
-	# Generowanie losowego ruchu myszką
-	$xDelta = $random.Next(-$maxMouseDelta, $maxMouseDelta + 1)
-	$yDelta = $random.Next(-$maxMouseDelta, $maxMouseDelta + 1)
-	[UserInput]::MoveMouse($xDelta, $yDelta)
-	# Losowe naciśnięcia klawiszy
-	$numKeyPresses = $random.Next(1, $maxKeyPresses + 1)
-	for ($i = 0; $i -lt $numKeyPresses; $i++)
-		{
-		$keyCode = $random.Next(65, 91) # Generowanie losowego kodu klawisza A-Z (ASCII 65-90)
-		[UserInput]::PressKey($keyCode)
-		}
-	}
+# Function to move the mouse to a random position on the screen
+function Move-RandomMouse {
+    $screenWidth = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width
+    $screenHeight = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height
+    $random = New-Object System.Random
+    $x = $random.Next(0, $screenWidth)
+    $y = $random.Next(0, $screenHeight)
+    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($x, $y)
+    Write-Host -ForegroundColor Green "Moved mouse to position:"
+    Write-Host -ForegroundColor Yellow "($x, $y)"
 
-# Wygenerowanie ruchu co 5 sekund
-while ($true)
-	{
-	GenerateRandomMovement
-	Start-Sleep -Seconds 5
-	}
+    # Stroke "Ctrl" key twice
+    [System.Windows.Forms.SendKeys]::SendWait("^")
+    Start-Sleep -Milliseconds 100
+    [System.Windows.Forms.SendKeys]::SendWait("^")
+}
 
-Add-Type -TypeDefinition @"
-using System;
-using System.Runtime.InteropServices;
-public class UserInput
-{
-[DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
-public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
-[DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
-public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, uint dwExtraInfo);
-public const int MOUSEEVENTF_MOVE = 0x0001;
-public const int MOUSEEVENTF_LEFTDOWN = 0x0002;
-public const int MOUSEEVENTF_LEFTUP = 0x0004;
-public const int MOUSEEVENTF_RIGHTDOWN = 0x0008;
-public const int MOUSEEVENTF_RIGHTUP = 0x0010;
-public const int MOUSEEVENTF_MIDDLEDOWN = 0x0020;
-public const int MOUSEEVENTF_MIDDLEUP = 0x0040;
-public const int MOUSEEVENTF_ABSOLUTE = 0x8000;
-public const int KEYEVENTF_KEYDOWN = 0x0000;
-public const int KEYEVENTF_KEYUP = 0x0002;
-public static void MoveMouse(int xDelta, int yDelta)
-{
-mouse_event(MOUSEEVENTF_MOVE, (uint)xDelta, (uint)yDelta, 0, 0);
+# Function to simulate random key presses
+function Send-RandomKey {
+    $random = New-Object System.Random
+    $keys = [System.Windows.Forms.Keys].GetEnumValues()
+    $key = $keys[$random.Next(0, $keys.Length)]
+    [System.Windows.Forms.SendKeys]::SendWait("$($key.ToString()) ")
+    Write-Host -ForegroundColor Green "Sent key:"
+    Write-Host -ForegroundColor Yellow "$key"
 }
-public static void ClickLeftMouseButton()
-{
-mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-}
-public static void ClickRightMouseButton()
-{
-mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
-mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
-}
-public static void PressKey(byte keyCode)
-{
-keybd_event(keyCode, 0, KEYEVENTF_KEYDOWN, 0);
-keybd_event(keyCode, 0, KEYEVENTF_KEYUP, 0);
-}
-}
-"@
 
-function GenerateRandomMovement
-	{
-	$maxMouseDelta = 50 # Maksymalna odległość o jaką poruszy się myszka (w pikselach)
-	$maxKeyPresses = 10 # Maksymalna liczba naciśnięć klawisza
-	$random = New-Object System.Random
-	# Generowanie losowego ruchu myszką
-	$xDelta = $random.Next(-$maxMouseDelta, $maxMouseDelta + 1)
-	$yDelta = $random.Next(-$maxMouseDelta, $maxMouseDelta + 1)
-	[UserInput]::MoveMouse($xDelta, $yDelta)
-	# Losowe naciśnięcia klawiszy
-	$numKeyPresses = $random.Next(1, $maxKeyPresses + 1)
-	for ($i = 0; $i -lt $numKeyPresses; $i++)
-		{
-		$keyCode = $random.Next(65, 91) # Generowanie losowego kodu klawisza A-Z (ASCII 65-90)
-		[UserInput]::PressKey($keyCode)
-		}
-	}
+# Ask the user if they want to proceed with the shutdown
+$shutdownProceed = $false
+do {
+    Write-Host -ForegroundColor Green "Do you want to proceed with the shutdown? (Y/N): "
+    $response = Read-Host
 
-# Wygenerowanie ruchu co 5 sekund
-while ($true)
-	{
-	GenerateRandomMovement
-	Start-Sleep -Seconds 5
-	}
+    if ($response -match '^[Yy]$') {
+        $shutdownProceed = $true
+        $validInput = $true
+    }
+    elseif ($response -match '^[Nn]$') {
+        $shutdownProceed = $false
+        $validInput = $true
+    }
+    else {
+        Write-Host "Invalid input. Please enter Y or N."
+        $validInput = $false
+    }
+} while (-not $validInput)
+
+# If the user chose not to proceed with the shutdown, exit the script
+if (-not $shutdownProceed) {
+    $TimeOut = 86400
+}
+else {
+    # Prompt the user for the timeout value and validate the input
+    do {
+        Write-Host -ForegroundColor Green "Please enter the timeout value (e.g., 1H, 30M, 45S): "
+        $timeoutInput = Read-Host
+
+        if ($timeoutInput -match '^\d+[HhMmSs]$') {
+            $unit = $timeoutInput[-1].ToString().ToUpper()
+            $value = [int]$timeoutInput.Substring(0, $timeoutInput.Length - 1)
+
+            switch ($unit) {
+                'H' { $TimeOut = $value * 3600 }
+                'M' { $TimeOut = $value * 60 }
+                'S' { $TimeOut = $value }
+            }
+
+            $validInput = $true
+        }
+        else {
+            Write-Host "Invalid input. Please enter a valid timeout value (e.g., 1H, 30M, 45S)."
+            $validInput = $false
+        }
+    } while (-not $validInput)
+}
+
+# Calculate the end time based on the current time and the timeout value
+$endTime = (Get-Date).AddSeconds($TimeOut)
+
+# Main loop to perform actions until the timeout period elapses
+$paused = $false
+
+while ((Get-Date) -lt $endTime) {
+
+    if (-not $paused) {
+        clear-host
+        Write-Host -ForegroundColor Blue "Press 'P' to pause."
+        $interval = Get-Random -Minimum 5 -Maximum 10
+        Write-Host -ForegroundColor Red "Shutdown at`: $endTime"
+        Write-Host -ForegroundColor Green "Break time interval:"
+        Write-Host -ForegroundColor Yellow "$interval (seconds)"
+        Move-RandomMouse
+        Start-Sleep -Seconds $interval
+        Send-RandomKey
+        Start-Sleep -Seconds $interval
+    }
+    else {
+        clear-host
+        Write-Host -ForegroundColor Blue "Paused. Press 'P' again to resume."
+        Start-Sleep -Seconds 1
+    }
+
+    # Check if 'P' key is pressed
+    if ([Console]::KeyAvailable) {
+        $key = [Console]::ReadKey($true)
+        if ($key.Key -eq 'P') {
+            $paused = -not $paused
+            if ($paused) {
+                clear-host
+                Write-Host -ForegroundColor Red "Paused. Press 'P' again to resume."
+                Start-Sleep -Seconds 1
+            }
+            else {
+                Write-Host -ForegroundColor Green "Resumed."
+            }
+            # Adding a short sleep to debounce the key press
+            Start-Sleep -Milliseconds 500
+        }
+    }
+
+    Start-Sleep -Milliseconds 100 # To reduce CPU usage
+}
+
+# Shutdown the system with the specified timeout
+shutdown -s -f -t 30

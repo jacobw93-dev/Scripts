@@ -1,18 +1,25 @@
-$Host.UI.RawUI.WindowTitle = "Batch rename images"
+﻿$Host.UI.RawUI.WindowTitle = "Batch rename images"
 $Host.UI.RawUI.ForegroundColor = "White"
-$Host.PrivateData.ProgressBackgroundColor = 'Magenta'
+$Host.PrivateData.ProgressBackgroundColor = 'Yellow'
 $Host.PrivateData.ProgressForegroundColor = 'Black'
-# $PSStyle.Progress.View = 'Minimal'
+$PSStyle.Progress.View = 'Minimal'
 
 $fileTypes = @('.jpeg', '.jpg', '.png')
-$excludedFileTypes = @('.!qb', '.part', '.zip', '.rar')
-$CompressedFileTypes = @('.zip', '.rar')
+$excludedFileTypes = @('.!qb', '.part', '.zip', '.rar', '.7z')
+$CompressedFileTypes = @('.zip', '.rar', '.7z')
 $regex_str = '[^0-9A-Za-z\.]+';
 $Date = Get-Date -format "yyyyMMdd_HHmmss"
 $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
 $LowQualityName = 'LQ'
 $ContactSheetsName = 'CS'
 $ExcludedFolderNames = @($LowQualityName, $ContactSheetsName)
+
+# Execution statistics used in the final console/e-mail summary
+$FilesRenamedSuccessfully = 0
+$ProcessingErrorCount = 0
+$ProcessingErrors = [System.Collections.Generic.List[string]]::new()
+$LQImages_counter = 0
+$CSImages_counter = 0
 
 Add-Type -AssemblyName System.Windows.Forms
 Set-ItemProperty $key Hidden 1
@@ -42,15 +49,29 @@ $InputFolder = SelectInputFolder
 Set-ItemProperty $key Hidden 0
 Set-ItemProperty $key ShowSuperHidden 0
 # Stop-Process -processname explorer
-$changelog_FullName = "$InputFolder" + '\' + "changelog_" + ((Get-Item -Path $InputFolder).BaseName -Replace $regex_str, "_") + "_" + $Date + ".txt"
+$changelog_FullName = "$InputFolder" + '\' + "changelog_" + ((Get-Item -LiteralPath $InputFolder).BaseName -Replace $regex_str, "_") + "_" + $Date + ".txt"
 
 # determine whether to rename subfolders of the previously specified $InputFolder directory. In case of option [1] the script should rename the folders inside the given folder, otherwise [2] only their subfolders.
 
 function RenameMode {
 	$answer = $null
 	while (@("1", "2") -notcontains $answer) {
-		Write-Host -ForegroundColor Green "`nShould I swap file names in first or second level subdirectories? `n1 (First Level), 2 (Second Level)"
-		$answer = Read-Host
+		Write-Host -ForegroundColor Green "`nSelect the level of subdirectories to process:"
+		Write-Host -ForegroundColor DarkGray @"
+
+Example directory structure:
+
+[Selected folder]                     Level 0 (not selectable)
+|-- Event_A                           Level 1  <-- option 1
+|   |-- Set_01                        Level 2  <-- option 2
+|   `-- Set_02                        Level 2  <-- option 2
+`-- Event_B                           Level 1  <-- option 1
+    `-- Set_03                        Level 2  <-- option 2
+
+1 = Process folders directly inside the selected folder (Event_A, Event_B)
+2 = Process their subfolders (Set_01, Set_02, Set_03)
+"@
+		$answer = Read-Host "Enter 1 or 2"
 		$answer = $answer.ToUpper().Trim();
 		Switch ($answer) {
 			"1" { $RenMode = 0 }
@@ -74,7 +95,7 @@ function Get-UserChoice {
 			y { $Chosen = "1" }
 			n { $Chosen = "0" }
 		}
-		if (@("y", "n") -notcontains $answer) { Write-Host "Enter the correct value"; pause }
+		if (@("y", "n") -notcontains $answer) { Write-Host -ForegroundColor Red "Enter the correct value"; pause }
 	}
 	return $Chosen
 }
@@ -94,6 +115,10 @@ function MoveLQandCSImages {
 	return $Chosen
 }
 
+function ShutdownComputer {
+	$Chosen = Get-UserChoice -Question "Should I shutdown computer after script completion?"
+	return $Chosen
+}
 
 function Is-Numeric ($Value) {
 	return $Value -match "^[\d\.]+$"
@@ -101,19 +126,23 @@ function Is-Numeric ($Value) {
 
 function SetFolderNumerator {
 	$defaultValue = 1
-	Write-Host -ForegroundColor Green "`nSpecify the number from which to start numbering the directories (default: $defaultValue)"
-	$Number_from = Read-Host
-	if ($Number_from -eq "") { $Number_from = $defaultValue }
-	$Number_result = Is-Numeric $Number_from
-	while ($Number_result -eq $False) {
+	do {
 		Write-Host -ForegroundColor Green "`nSpecify the number from which to start numbering the directories (default: $defaultValue)"
 		$Number_from = Read-Host
-		if ($Number_from -eq "") { $Number_from = $defaultValue }
+		if ($Number_from -eq "") {
+			$Number_from = $defaultValue 
+			[System.Console]::SetCursorPosition(0, [System.Console]::CursorTop - 1)
+			Write-Host $Number_from
+		}
 		$Number_result = Is-Numeric $Number_from
-	}
+		if (-not $Number_result) {
+			Write-Host -ForegroundColor Red "`nInvalid input. Please enter a valid number." ; pause
+		}
+	} while ($Number_result -eq $False)
 	$Number_from = [int]$Number_from
 	return $Number_from
 }
+
 
 function ExtractArchives {
 	$myChangeLog = [System.Collections.Generic.List[object]]::new()
@@ -126,8 +155,8 @@ function ExtractArchives {
 		$archives_counter++
 		$percent_Archive = [math]::Round($archives_counter / $Total_archives_count * 100)
 		Write-Progress -activity "Total Extraction Progress" -CurrentOperation "Current file: '$Archive'" -Status "Processing $archives_counter of $Total_archives_count ($percent_Archive%)" -PercentComplete $percent_Archive
-		$NewName = ($Archive.Name -Replace $regex_str, ".");
-		$NewBaseName = ($Archive.Name -Replace $regex_str, ".");
+		$NewName = ($Archive.Name -Replace $regex_str, ".") -Replace '^\.+', "";
+		$NewBaseName = ($Archive.Name -Replace $regex_str, ".") -Replace '^\.+', "";
 		$NewFullName = ($Archive.FullName -Replace [regex]::Escape($Archive.Name), $NewName);
 		$TargetPath = ($Archive.FullName -Replace [regex]::Escape($Archive.BaseName), $NewBaseName).trimend($Archive.Extension);
 		Rename-Item -LiteralPath $Archive.FullName -NewName $NewName;
@@ -147,10 +176,10 @@ function CleanFilesandFolders {
 		$_.extension -notin $fileTypes -and
 		$_.Name -notlike '*changelog*' -and
 		$_.Extension -ne '.txt' } | Remove-Item -Verbose
-	Get-ChildItem $InputFolder -Directory -Recurse | Where-Object { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item -Verbose ;
+	Get-ChildItem -LiteralPath $InputFolder -Directory -Recurse | Where-Object { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item -Verbose ;
 }
 
-$Total_archives_count = (Get-ChildItem $InputFolder -file -Recurse | where-object { $_.extension -in $CompressedFileTypes } ).Count
+$Total_archives_count = (Get-ChildItem -LiteralPath $InputFolder -file -Recurse | where-object { $_.extension -in $CompressedFileTypes } ).Count
 $Archives_count = $Total_archives_count
 If ( $Total_archives_count -ge 1 ) {
 	$ArchivesOnly = ExtractArchivesOnly
@@ -169,6 +198,8 @@ If ( $Total_archives_count -ge 1 ) {
 $RenMode = RenameMode
 $Choose = ChangeFoldersNames
 $MoveLQCS = MoveLQandCSImages
+$QuitPC = ShutdownComputer
+
 If ( $Choose -eq "1" ) { $FolderNumerator = SetFolderNumerator }
 If ( $Total_archives_count -ge 1 ) { ExtractArchives }
 
@@ -194,7 +225,7 @@ function get-ParentFolders {
 	return $ParentFolders
 }
 
-$ParentFolders = get-ParentFolders -InputValueString "1" -RenModeString $RenMode -InputFolder $InputFolder -excludedFileTypes $excludedFileTypes
+$ParentFolders = get-ParentFolders -InputValueString "1" -RenModeString $RenMode -InputFolder $InputFolder -excludedFileTypes $excludedFileTypes | where-object { $_.Name -notin $ExcludedFolderNames }
 
 # For each parent folder get all folders recursively and move to parent
 $myChangeLog = [System.Collections.Generic.List[object]]::new()
@@ -207,11 +238,11 @@ ForEach ($Parent in $ParentFolders) {
 		$myChangeLog.Add($logEntry) | Out-Null	
 	}
 }
-$myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
+$myChangeLog | Out-File -Encoding UTF8 -LiteralPath ($changelog_FullName) -Append;
 
 CleanFilesandFolders
 
-Write-Host "`nStart time: $startTime"
+Write-Host -ForegroundColor DarkCyan "`nStart time: $startTime"
 
 # Get all images with width and height less than 900 px and move them to separate folder
 Add-Type -AssemblyName System.Drawing
@@ -226,13 +257,27 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 	$pictures_Count = $pictures.Count
 	$pictures_Count_formatted = "{0:N0}" -f $pictures_Count
 	$pictures_Count_formatted = $pictures_Count_formatted -replace ",", " "
+
+	$startTime = Get-Date
+
 	ForEach ($picture in $pictures) {
 		$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 		$j++
+		
+		$j_formatted = "{0:N0}" -f $j
+		$j_formatted = $j_formatted -replace ",", " "
+
 		$percent = [math]::Round($j / $pictures_Count * 100)
-		Write-Progress -Id 1  -Activity "Analyzing images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Processing $j of $pictures_Count_formatted ($percent%)" -PercentComplete $percent
-		Write-Progress -Id 2 -parentId 1 -Activity "Moving LQ images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Found $i LQ images"
-		Write-Progress -Id 3 -parentId 1 -Activity "Moving CS images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Found $k CS images"
+
+		# Calculate elapsed time and estimated remaining time
+		$elapsedTime = (Get-Date) - $startTime
+		$estimatedTotalTime = $elapsedTime.TotalSeconds / $j * $pictures_Count
+		$estimatedRemainingTime = [TimeSpan]::FromSeconds($estimatedTotalTime - $elapsedTime.TotalSeconds)
+
+		Write-Progress -Id 1 -Activity "Time remaining" -Status ("Estimated time remaining: {0:hh\:mm\:ss} [hh:mm:ss]" -f $estimatedRemainingTime)
+		Write-Progress -Id 2 -parentId 1 -Activity "Analyzing images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Processing $j_formatted of $pictures_Count_formatted ($percent%)" -PercentComplete $percent
+		Write-Progress -Id 3 -parentId 2 -Activity "Moving LQ images..." -Status "Found $i LQ images"
+		Write-Progress -Id 4 -parentId 2 -Activity "Moving CS images..." -Status "Found $k CS images"
 		try {
 			$Image = [System.Drawing.Image]::FromFile($picture.FullName)
 			$Width = $Image.Width
@@ -241,14 +286,14 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 			$Image.Dispose()
 
 			# Define conditions
-			$IsLowQuality = ($Width -lt 900 -and $Height -lt 900)
-			$IsContactSheet = ($AspectRatio -ge 2)
+			$IsLowQuality = ($Width -lt 900 -and $Height -lt 900) -or ($picture.Name -match "cover")
+			$IsContactSheet = ($AspectRatio -ge 2) -or ($picture.Name -match "contactsheet|cs")
 			# Check if width is zero to prevent division by zero
 			if ($IsLowQuality) {
 				$i++
-				$destinationFolder = $picture.Directory.Parent.FullName + '\' + $LowQualityName;
-				$destinationFile = $destinationFolder + '\' + $picture.Directory.Name + '_' + $picture.Name;
-				if (-not (Test-Path -Path $destinationFolder -PathType Container)) {
+				$destinationFolder = $picture.Directory.Parent.FullName + '\' + $LowQualityName + '\' + $picture.Directory.Name;
+				$destinationFile = $destinationFolder + '\' + $picture.Name;
+				if (-not (Test-Path -LiteralPath $destinationFolder -PathType Container)) {
 					New-Item -Path $destinationFolder -ItemType Directory
 				}
 				Move-Item -LiteralPath $picture.FullName $destinationFile -Force
@@ -257,9 +302,9 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 			}
 			elseif ($IsContactSheet) {
 				$k++
-				$destinationFolder = $picture.Directory.Parent.FullName + '\' + $ContactSheetsName;
-				$destinationFile = $destinationFolder + '\' + $picture.Directory.Name + '_' + $picture.Name;
-				if (-not (Test-Path -Path $destinationFolder -PathType Container)) {
+				$destinationFolder = $picture.Directory.Parent.FullName + '\' + $ContactSheetsName + '\' + $picture.Directory.Name;
+				$destinationFile = $destinationFolder + '\' + $picture.Name;
+				if (-not (Test-Path -LiteralPath $destinationFolder -PathType Container)) {
 					New-Item -Path $destinationFolder -ItemType Directory
 				}
 				Move-Item -LiteralPath $picture.FullName $destinationFile -Force
@@ -269,15 +314,17 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 			$image.Dispose()
 		}
 		catch {
-			$LogEntry = "Error processing $($File.FullName): $_"
-			$myChangeLog.Add($logEntry) | Out-Null
+			$ProcessingErrorCount++
+			$LogEntry = "Error processing image '$($picture.FullName)': $($_.Exception.Message)"
+			$ProcessingErrors.Add($LogEntry) | Out-Null
+			$myChangeLog.Add($LogEntry) | Out-Null
 		}
 	}
 }
 CleanFilesandFolders
 
-$LQImages_counter = $i
-$CSImages_counter = $k
+$LQImages_counter = if ($null -ne $i) { $i } else { 0 }
+$CSImages_counter = if ($null -ne $k) { $k } else { 0 }
 $myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 
 # Rename Folders
@@ -286,17 +333,22 @@ If ( $Choose -eq "1" ) {
 	$ParentFolders = get-ParentFolders -InputValueString "1" -RenModeString $RenMode -InputFolder $InputFolder -excludedFileTypes $excludedFileTypes | where-object { $_.Name -notin $ExcludedFolderNames }
 	$myChangeLog = [System.Collections.Generic.List[object]]::new()
 	$number = $FolderNumerator
-	
+	$randomHex = -join (Get-Random -Count 6 -InputObject (48..57 + 97..102) | ForEach-Object { [char]$_ })
 	foreach ($folder in $ParentFolders) {
 		if ( ($previousfolder.Parent.FullName) -ne ($folder.Parent.FullName) ) { $number = $FolderNumerator }
 		try {
 			$folder_count = (Get-ChildItem $folder.Parent.FullName -Directory).Count
 			$PaddingLength = $folder_count.ToString().Length
 			$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
-			$tempName = ($number.ToString().PadLeft($PaddingLength, '0'))
-			$NewName = $folder.Parent.Name + ' - Set ' + $tempName
-			Rename-Item -LiteralPath $($folder.FullName) -NewName $tempName -Force -Verbose -ErrorAction SilentlyContinue
-			Rename-Item -LiteralPath ($($folder.Parent.FullName) + "\" + $tempName) -NewName $NewName -Force -Verbose -ErrorAction SilentlyContinue
+			$tempName = ($number.ToString().PadLeft($PaddingLength, '0')) + "_" + $randomHex
+			$NewName = $folder.Parent.Name + ' - Set ' + ($number.ToString().PadLeft($PaddingLength, '0'))
+			if (!(Test-Path -LiteralPath ($($folder.Parent.FullName) + "\" + $NewName))) {
+				Rename-Item -LiteralPath $($folder.FullName) -NewName $NewName -Force -Verbose -ErrorAction SilentlyContinue
+			}
+			else {
+				Rename-Item -LiteralPath $($folder.FullName) -NewName $tempName -Force -Verbose -ErrorAction SilentlyContinue
+				Rename-Item -LiteralPath ($($folder.Parent.FullName) + "\" + $tempName) -NewName $NewName -Force -Verbose -ErrorAction SilentlyContinue
+			}
 			$logEntry = $("$Current_timestamp; Renamed directory: '{0}';'{1}' " -f $folder.FullName, $NewName)
 			$myChangeLog.Add($logEntry) | Out-Null
 		}
@@ -334,6 +386,7 @@ Foreach ($dir In $Folders) {
 	$files_count = ($files).Count
 	$PaddingLength = $files_count.ToString().Length
 	$dir_files_counter = 0
+	$randomHex = -join (Get-Random -Count 6 -InputObject (48..57 + 97..102) | ForEach-Object { [char]$_ })
 	Foreach ($file In $files) {
 		$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 		$extension = $file.Extension
@@ -341,6 +394,8 @@ Foreach ($dir In $Folders) {
 		If ($file) {
 			$Total_files_counter++
 			$dir_files_counter++
+			$Total_files_counter_formatted = "{0:N0}" -f $Total_files_counter
+			$Total_files_counter_formatted = $Total_files_counter_formatted -replace ",", " "
 			$Total_complete = [math]::Round($Total_files_counter / $Total_files_count * 100)
 			$elapsedTime = $(get-date) - $startTime 
 			$estimatedTotalSeconds = $Total_files_count / $Total_files_counter * $elapsedTime.TotalSeconds 
@@ -348,19 +403,34 @@ Foreach ($dir In $Folders) {
 			$estimatedCompletionTime = $startTime + $estimatedTotalSecondsTS
 			$estimatedCompletionTime = Get-Date -Date $estimatedCompletionTime -Format "yyyy/MM/dd HH:mm:ss"
 			Write-Progress -Id 1 -activity "Estimated Completion Time" -Status "Estimated Completion Time = $estimatedCompletionTime"
-			Write-Progress -Id 2 -parentId 1 -activity "Total Files" -CurrentOperation "Current file: '$file'" -Status "Processing $Total_files_counter of $Total_files_count_formatted ($Total_complete%)" -PercentComplete $Total_complete
+			Write-Progress -Id 2 -parentId 1 -activity "Total Files" -CurrentOperation "Current file: '$file'" -Status "Processing $Total_files_counter_formatted of $Total_files_count_formatted ($Total_complete%)" -PercentComplete $Total_complete
 			$Folder_Complete = [math]::Round($dir_files_counter / $files_count * 100)
 			Write-Progress -Id 4 -parentId 3 -activity "Current Folder Files" -CurrentOperation "Current file: '$file'" -Status "Processing $dir_files_counter of $files_count ($Folder_Complete%)" -PercentComplete $Folder_Complete
-			$temporary = ($counter.ToString().PadLeft($PaddingLength, '0')) + "." + $extension
-			$replace = $newdir + "_" + $temporary
+			$temporary = $randomHex + "_" + ($counter.ToString().PadLeft($PaddingLength, '0')) + "." + $extension
+			$new_img_name = $newdir + "_" + ($counter.ToString().PadLeft($PaddingLength, '0')) + "." + $extension
 			# Trim spaces and rename the file
-			$image_string = $file.fullname.ToString().Trim()
-			# "$split[0] renamed to $replace"
-			$replace = (($replace -Replace $regex_str, ".") -replace '\.+', '.');
-			Rename-Item -LiteralPath "$image_string" "$temporary";
-			Rename-Item -LiteralPath ($($file.DirectoryName) + "\" + $temporary) "$replace";
-			$logEntry = $("$Current_timestamp; Renamed file: '{0}';'{1}'" -f $image_string, $replace)
-			$myChangeLog.Add($logEntry) | Out-Null
+			$old_img_name = $file.fullname.ToString().Trim()
+			# "$split[0] renamed to $new_img_name"
+			$new_img_name = (($new_img_name -Replace $regex_str, ".") -replace '\.+', '.') -Replace '^\.+', "";
+			try {
+				if (!(Test-Path -LiteralPath ($($file.DirectoryName) + "\" + $new_img_name))) {
+					Rename-Item -LiteralPath "$old_img_name" -NewName "$new_img_name" -ErrorAction Stop
+				}
+				else {
+					Rename-Item -LiteralPath "$old_img_name" -NewName "$temporary" -ErrorAction Stop
+					Rename-Item -LiteralPath ($($file.DirectoryName) + "\" + $temporary) -NewName "$new_img_name" -ErrorAction Stop
+				}
+
+				$FilesRenamedSuccessfully++
+				$logEntry = $("$Current_timestamp; Renamed file: '{0}';'{1}'" -f $old_img_name, $new_img_name)
+				$myChangeLog.Add($logEntry) | Out-Null
+			}
+			catch {
+				$ProcessingErrorCount++
+				$logEntry = "$Current_timestamp; ERROR renaming file: '$old_img_name'; $($_.Exception.Message)"
+				$ProcessingErrors.Add($logEntry) | Out-Null
+				$myChangeLog.Add($logEntry) | Out-Null
+			}
 			$counter++
 		}
 	}
@@ -383,65 +453,181 @@ clear-host
 
 # Write process time to console
 Write-Host -ForegroundColor Green "Process time: $processTimeFormatted (hh:mm:ss)"
-"`nProcess time: $processTimeFormatted (hh:mm:ss)" | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
+"`nProcess time: $processTimeFormatted (hh:mm:ss)" | Out-File -Encoding UTF8 -LiteralPath ($changelog_FullName) -Append;
 
-# SMTP server credentials
-$smtpUser = "my.0wn.n0tificati0n@outlook.com"
-$smtpPass = "2mXorOPE9C0BcG9SZGfjP8FuSzh75Jc9GdP9L2uzMbQ="
+# Print the same execution summary in the PowerShell console
+Write-Host -ForegroundColor Cyan "`n================ EXECUTION SUMMARY ================"
+Write-Host "Input path(s)              : $InputFolder"
+Write-Host "Files found for processing : $Total_files_count"
+Write-Host "Files converted/renamed    : $FilesRenamedSuccessfully"
+Write-Host "Archives found/extracted   : $Archives_count"
+Write-Host "Low-quality images moved   : $LQImages_counter"
+Write-Host "Contact sheets moved       : $CSImages_counter"
+Write-Host "Processing errors          : $ProcessingErrorCount"
+Write-Host "Start time                 : $($startTime.ToString('yyyy-MM-dd HH:mm:ss'))"
+Write-Host "End time                   : $($endTime.ToString('yyyy-MM-dd HH:mm:ss'))"
+Write-Host "Total runtime              : $processTimeFormatted (hh:mm:ss)"
+Write-Host -ForegroundColor Cyan "===================================================`n"
+
+# SMTP configuration / credentials
+# Non-secret settings are read from environment variables.
+$smtpServer = $env:RENAME_PICS_SMTP_SERVER
+$smtpPort = $env:RENAME_PICS_SMTP_PORT
+$smtpTo = $env:RENAME_PICS_SMTP_TO
+$credentialTarget = 'rename_pics_smtp'
+
+if ([string]::IsNullOrWhiteSpace($smtpServer)) { $smtpServer = 'smtp.gmail.com' }
+if ([string]::IsNullOrWhiteSpace($smtpPort)) { $smtpPort = '587' }
+if ([string]::IsNullOrWhiteSpace($smtpTo)) {
+    throw 'RENAME_PICS_SMTP_TO environment variable is not configured.'
+}
+
+[int]$smtpPortNumber = 0
+if (-not [int]::TryParse([string]$smtpPort, [ref]$smtpPortNumber)) {
+    throw "RENAME_PICS_SMTP_PORT contains an invalid value: '$smtpPort'."
+}
+
+# Read the SMTP username/password from Windows Credential Manager.
+if (-not ('RenamePicsCredentialReader' -as [type])) {
+    Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+
+public static class RenamePicsCredentialReader
+{
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct CREDENTIAL
+    {
+        public UInt32 Flags;
+        public UInt32 Type;
+        public IntPtr TargetName;
+        public IntPtr Comment;
+        public System.Runtime.InteropServices.ComTypes.FILETIME LastWritten;
+        public UInt32 CredentialBlobSize;
+        public IntPtr CredentialBlob;
+        public UInt32 Persist;
+        public UInt32 AttributeCount;
+        public IntPtr Attributes;
+        public IntPtr TargetAlias;
+        public IntPtr UserName;
+    }
+
+    [DllImport("advapi32.dll", EntryPoint = "CredReadW", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool CredRead(string target, UInt32 type, UInt32 reservedFlag, out IntPtr credentialPtr);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern void CredFree(IntPtr buffer);
+
+    public static string[] ReadGeneric(string target)
+    {
+        IntPtr credentialPtr;
+        if (!CredRead(target, 1, 0, out credentialPtr))
+            return null;
+
+        try
+        {
+            CREDENTIAL credential = (CREDENTIAL)Marshal.PtrToStructure(credentialPtr, typeof(CREDENTIAL));
+            string userName = credential.UserName == IntPtr.Zero ? null : Marshal.PtrToStringUni(credential.UserName);
+            string password = null;
+
+            if (credential.CredentialBlob != IntPtr.Zero && credential.CredentialBlobSize > 0)
+                password = Marshal.PtrToStringUni(credential.CredentialBlob, (int)credential.CredentialBlobSize / 2);
+
+            return new string[] { userName, password };
+        }
+        finally
+        {
+            CredFree(credentialPtr);
+        }
+    }
+}
+'@
+}
+
+$storedCredential = [RenamePicsCredentialReader]::ReadGeneric($credentialTarget)
+if (-not $storedCredential -or $storedCredential.Count -lt 2 -or
+    [string]::IsNullOrWhiteSpace($storedCredential[0]) -or
+    [string]::IsNullOrEmpty($storedCredential[1])) {
+    throw "Windows Credential Manager target '$credentialTarget' was not found or is incomplete."
+}
+
+$smtpUser = $storedCredential[0]
+$smtpPassword = $storedCredential[1]
+$smtpFrom = $smtpUser
 
 # Send email notification
-$smtpServer = "smtp-mail.outlook.com"
-$smtpFrom = $smtpUser
-$smtpTo = "jacob.w93@gmail.com"
-$messageSubject = "Script execution is complete"
-$messageBody = "The `"rename_pics.ps1`" script execution for input folder `"$InputFolder`" is complete. Please find attached changelog"
+$ScriptName = $MyInvocation.MyCommand.Name
+$messageSubject = "Script execution is complete - `"$ScriptName`""
 
-# Define the key (16 bytes for 128-bit key)
-$key = "5243428937038590"  # 16 characters
+$ErrorStatus = if ($ProcessingErrorCount -eq 0) { "NO - no processing errors detected" } else { "YES - $ProcessingErrorCount error(s) detected" }
+$InputPathsSummary = $InputFolder
+$ErrorDetails = if ($ProcessingErrorCount -gt 0) {
+	($ProcessingErrors | Select-Object -First 10) -join "`r`n"
+} else {
+	"None"
+}
+if ($ProcessingErrorCount -gt 10) {
+	$ErrorDetails += "`r`n... plus $($ProcessingErrorCount - 10) additional error(s). See the attached changelog for details."
+}
 
-# Define the encrypted password
-$encryptedPassword = $smtpPass
+$messageBody = @"
+The "$ScriptName" script execution is complete.
 
-# Convert the key and encrypted password to byte arrays
-$keyBytes = [System.Text.Encoding]::UTF8.GetBytes($key)
-$encryptedBytes = [Convert]::FromBase64String($encryptedPassword)
+================ EXECUTION SUMMARY ================
+Input path(s)              : $InputPathsSummary
+Files found for processing : $Total_files_count
+Files converted/renamed    : $FilesRenamedSuccessfully
+Archives found/extracted   : $Archives_count
+Low-quality images moved   : $LQImages_counter
+Contact sheets moved       : $CSImages_counter
+Processing errors          : $ProcessingErrorCount
+Were there any errors?     : $ErrorStatus
+Start time                 : $($startTime.ToString('yyyy-MM-dd HH:mm:ss'))
+End time                   : $($endTime.ToString('yyyy-MM-dd HH:mm:ss'))
+Total runtime              : $processTimeFormatted (hh:mm:ss)
+===================================================
 
-# Create AES encryption provider
-$aesProvider = New-Object System.Security.Cryptography.AesCryptoServiceProvider
-$aesProvider.KeySize = 128
-$aesProvider.Key = $keyBytes
+Error details (up to first 10):
+$ErrorDetails
 
-# Set padding mode to None
-$aesProvider.Padding = [System.Security.Cryptography.PaddingMode]::None
+The changelog is attached when its size is less than 20 MB.
+"@
 
-# Set decryption mode to CBC (Cipher Block Chaining)
-$aesProvider.Mode = [System.Security.Cryptography.CipherMode]::CBC
+# Path to the log file
+$logFile = "$changelog_FullName"
 
-# Set the IV (Initialization Vector) to zeros
-$aesProvider.IV = [byte[]]::new(16)  # 16 bytes for 128-bit IV
+# Check if the log file size is less than 20 MB (20 * 1024 * 1024 bytes)
+$attachment = $null
+if ((Get-Item -LiteralPath $logFile).Length -lt 20MB) {
+    # Attach the log file if it is less than 20 MB
+    $attachment = $logFile
+}
 
-# Create decryptor
-$decryptor = $aesProvider.CreateDecryptor()
+# Create the MailMessage object
+$mailMessage = New-Object system.net.mail.mailmessage
+$mailMessage.From = $smtpFrom
+$mailMessage.To.Add($smtpTo)
+$mailMessage.Subject = $messageSubject
+$mailMessage.Body = $messageBody
 
-# Decrypt the password
+# Attach log file if applicable
+if ($attachment) {
+    $mailMessage.Attachments.Add($attachment)
+}
+
+# Configure the SMTP client
+$smtpClient = New-Object system.net.mail.smtpclient($smtpServer, $smtpPortNumber)
+$smtpClient.EnableSsl = $true
+$smtpClient.Credentials = New-Object System.Net.NetworkCredential($smtpUser, $smtpPassword)
+
+# Send the email
 try {
-	$decryptedBytes = $decryptor.TransformFinalBlock($encryptedBytes, 0, $encryptedBytes.Length)
-    
-	# Convert decrypted bytes to string
-	$decryptedPassword = [System.Text.Encoding]::UTF8.GetString($decryptedBytes)
+    $smtpClient.Send($mailMessage)
+    Write-Host "Email sent successfully."
 }
 catch {
-	Write-Host "Decryption failed: $_"
+    Write-Host "Failed to send email: $_"
 }
-
-# Create a secure string for the password
-$securePass = ConvertTo-SecureString $decryptedPassword -AsPlainText -Force
-
-# Create a credential object
-$credential = New-Object System.Management.Automation.PSCredential ($smtpUser, $securePass)
-
-# Send email using port 587 for TLS
-Send-MailMessage -From $smtpFrom -To $smtpTo -Subject $messageSubject -Body $messageBody -Attachments "$changelog_FullName" -SmtpServer $smtpServer -Credential $credential -UseSsl -Port 587
 
 $q = 0
 Write-Host -ForegroundColor Blue "Press 'Q' to exit."
@@ -462,7 +648,7 @@ while ($true) {
 			break
 		}
 	}
-	if ($q -eq 0) {
+	if (($q -eq 0) -and ($QuitPC -eq 1)) {
 		# Shut down the computer
 		shutdown -s -f -t 60
 	}

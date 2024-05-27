@@ -2,7 +2,7 @@ $Host.UI.RawUI.WindowTitle = "Batch rename images"
 $Host.UI.RawUI.ForegroundColor = "White"
 $Host.PrivateData.ProgressBackgroundColor = 'Magenta'
 $Host.PrivateData.ProgressForegroundColor = 'Black'
-$PSStyle.Progress.View = 'Classic'
+# $PSStyle.Progress.View = 'Minimal'
 
 $fileTypes = @('.jpeg', '.jpg', '.png')
 $excludedFileTypes = @('.!qb', '.part', '.zip', '.rar')
@@ -169,7 +169,14 @@ If ( $Total_archives_count -ge 1 ) {
 $RenMode = RenameMode
 $Choose = ChangeFoldersNames
 $MoveLQCS = MoveLQandCSImages
+If ( $Choose -eq "1" ) { $FolderNumerator = SetFolderNumerator }
+If ( $Total_archives_count -ge 1 ) { ExtractArchives }
 
+# Start time
+$startTime = Get-Date
+
+CleanFilesandFolders
+	
 # Get list of parent folders in root path
 function get-ParentFolders {
 	param(
@@ -187,14 +194,6 @@ function get-ParentFolders {
 	return $ParentFolders
 }
 
-# Start time
-$startTime = Get-Date
-
-If ( $Choose -eq "1" ) { $FolderNumerator = SetFolderNumerator }
-If ( $Total_archives_count -ge 1 ) { ExtractArchives }
-
-CleanFilesandFolders
-	
 $ParentFolders = get-ParentFolders -InputValueString "1" -RenModeString $RenMode -InputFolder $InputFolder -excludedFileTypes $excludedFileTypes
 
 # For each parent folder get all folders recursively and move to parent
@@ -263,7 +262,7 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 				if (-not (Test-Path -Path $destinationFolder -PathType Container)) {
 					New-Item -Path $destinationFolder -ItemType Directory
 				}
-				Move-Item -LiteralPath $CSImage.FullName $destinationFile -Force
+				Move-Item -LiteralPath $picture.FullName $destinationFile -Force
 				$logEntry = $("$Current_timestamp; Moved file:'{0}';'{1}' " -f $picture.FullName, $destinationFile)
 				$myChangeLog.Add($logEntry) | Out-Null
 			}
@@ -426,12 +425,13 @@ $decryptor = $aesProvider.CreateDecryptor()
 
 # Decrypt the password
 try {
-    $decryptedBytes = $decryptor.TransformFinalBlock($encryptedBytes, 0, $encryptedBytes.Length)
+	$decryptedBytes = $decryptor.TransformFinalBlock($encryptedBytes, 0, $encryptedBytes.Length)
     
-    # Convert decrypted bytes to string
-    $decryptedPassword = [System.Text.Encoding]::UTF8.GetString($decryptedBytes)
-} catch {
-    Write-Host "Decryption failed: $_"
+	# Convert decrypted bytes to string
+	$decryptedPassword = [System.Text.Encoding]::UTF8.GetString($decryptedBytes)
+}
+catch {
+	Write-Host "Decryption failed: $_"
 }
 
 # Create a secure string for the password

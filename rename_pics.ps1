@@ -262,7 +262,7 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 				if (-not (Test-Path -Path $destinationFolder -PathType Container)) {
 					New-Item -Path $destinationFolder -ItemType Directory
 				}
-				Move-Item -LiteralPath $CSImage.FullName $destinationFile -Force
+				Move-Item -LiteralPath $picture.FullName $destinationFile -Force
 				$logEntry = $("$Current_timestamp; Moved file:'{0}';'{1}' " -f $picture.FullName, $destinationFile)
 				$myChangeLog.Add($logEntry) | Out-Null
 			}

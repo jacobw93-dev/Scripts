@@ -386,8 +386,8 @@ Write-Host -ForegroundColor Green "Process time: $processTimeFormatted (hh:mm:ss
 "`nProcess time: $processTimeFormatted (hh:mm:ss)" | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 
 # SMTP server credentials
-$smtpUser = "my.own.notifiy@outlook.com"
-$smtpPass = "18lsWgG/EtqPwhANosIIyuPOJ8y/IHXWXBAw2z1V2vY="
+$smtpUser = "my.0wn.n0tificati0n@outlook.com"
+$smtpPass = "2mXorOPE9C0BcG9SZGfjP8FuSzh75Jc9GdP9L2uzMbQ="
 
 # Send email notification
 $smtpServer = "smtp-mail.outlook.com"

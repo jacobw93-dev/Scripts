@@ -1,8 +1,8 @@
 $Host.UI.RawUI.WindowTitle = "Batch rename images"
 $Host.UI.RawUI.ForegroundColor = "White"
-$Host.PrivateData.ProgressBackgroundColor = 'Magenta'
+$Host.PrivateData.ProgressBackgroundColor = 'Yellow'
 $Host.PrivateData.ProgressForegroundColor = 'Black'
-# $PSStyle.Progress.View = 'Minimal'
+$PSStyle.Progress.View = 'Minimal'
 
 $fileTypes = @('.jpeg', '.jpg', '.png')
 $excludedFileTypes = @('.!qb', '.part', '.zip', '.rar')
@@ -74,7 +74,7 @@ function Get-UserChoice {
 			y { $Chosen = "1" }
 			n { $Chosen = "0" }
 		}
-		if (@("y", "n") -notcontains $answer) { Write-Host "Enter the correct value"; pause }
+		if (@("y", "n") -notcontains $answer) { Write-Host -ForegroundColor Red "Enter the correct value"; pause }
 	}
 	return $Chosen
 }
@@ -94,6 +94,10 @@ function MoveLQandCSImages {
 	return $Chosen
 }
 
+function ShutdownComputer {
+	$Chosen = Get-UserChoice -Question "Should I shutdown computer after script completion?"
+	return $Chosen
+}
 
 function Is-Numeric ($Value) {
 	return $Value -match "^[\d\.]+$"
@@ -101,19 +105,22 @@ function Is-Numeric ($Value) {
 
 function SetFolderNumerator {
 	$defaultValue = 1
-	Write-Host -ForegroundColor Green "`nSpecify the number from which to start numbering the directories (default: $defaultValue)"
-	$Number_from = Read-Host
-	if ($Number_from -eq "") { $Number_from = $defaultValue }
-	$Number_result = Is-Numeric $Number_from
-	while ($Number_result -eq $False) {
+	do {
 		Write-Host -ForegroundColor Green "`nSpecify the number from which to start numbering the directories (default: $defaultValue)"
 		$Number_from = Read-Host
-		if ($Number_from -eq "") { $Number_from = $defaultValue }
+		if ($Number_from -eq "") {
+			$Number_from = $defaultValue 
+			Write-Host $Number_from
+		}
 		$Number_result = Is-Numeric $Number_from
-	}
+		if (-not $Number_result) {
+			Write-Host -ForegroundColor Red "`nInvalid input. Please enter a valid number." ; pause
+		}
+	} while ($Number_result -eq $False)
 	$Number_from = [int]$Number_from
 	return $Number_from
 }
+
 
 function ExtractArchives {
 	$myChangeLog = [System.Collections.Generic.List[object]]::new()
@@ -169,6 +176,8 @@ If ( $Total_archives_count -ge 1 ) {
 $RenMode = RenameMode
 $Choose = ChangeFoldersNames
 $MoveLQCS = MoveLQandCSImages
+$QuitPC = ShutdownComputer
+
 If ( $Choose -eq "1" ) { $FolderNumerator = SetFolderNumerator }
 If ( $Total_archives_count -ge 1 ) { ExtractArchives }
 
@@ -226,13 +235,27 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 	$pictures_Count = $pictures.Count
 	$pictures_Count_formatted = "{0:N0}" -f $pictures_Count
 	$pictures_Count_formatted = $pictures_Count_formatted -replace ",", " "
+
+	$startTime = Get-Date
+
 	ForEach ($picture in $pictures) {
 		$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 		$j++
+		
+		$j_formatted = "{0:N0}" -f $j
+		$j_formatted = $j_formatted -replace ",", " "
+
 		$percent = [math]::Round($j / $pictures_Count * 100)
-		Write-Progress -Id 1  -Activity "Analyzing images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Processing $j of $pictures_Count_formatted ($percent%)" -PercentComplete $percent
-		Write-Progress -Id 2 -parentId 1 -Activity "Moving LQ images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Found $i LQ images"
-		Write-Progress -Id 3 -parentId 1 -Activity "Moving CS images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Found $k CS images"
+
+		# Calculate elapsed time and estimated remaining time
+		$elapsedTime = (Get-Date) - $startTime
+		$estimatedTotalTime = $elapsedTime.TotalSeconds / $j * $pictures_Count
+		$estimatedRemainingTime = [TimeSpan]::FromSeconds($estimatedTotalTime - $elapsedTime.TotalSeconds)
+
+		Write-Progress -Id 1 -Activity "Time remaining" -Status ("Estimated time remaining: {0:hh\:mm\:ss} [hh:mm:ss]" -f $estimatedRemainingTime)
+		Write-Progress -Id 2 -parentId 1 -Activity "Analyzing images..." -CurrentOperation "Current file: `"$($picture.Name)`", directory: `"$($picture.Directory.Name)`"" -Status "Processing $j_formatted of $pictures_Count_formatted ($percent%)" -PercentComplete $percent
+		Write-Progress -Id 3 -parentId 2 -Activity "Moving LQ images..." -Status "Found $i LQ images"
+		Write-Progress -Id 4 -parentId 2 -Activity "Moving CS images..." -Status "Found $k CS images"
 		try {
 			$Image = [System.Drawing.Image]::FromFile($picture.FullName)
 			$Width = $Image.Width
@@ -242,7 +265,7 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 
 			# Define conditions
 			$IsLowQuality = ($Width -lt 900 -and $Height -lt 900)
-			$IsContactSheet = ($AspectRatio -ge 2)
+			$IsContactSheet = ($AspectRatio -ge 2) -or ($picture.Name -match "contactsheet|cs")
 			# Check if width is zero to prevent division by zero
 			if ($IsLowQuality) {
 				$i++
@@ -341,6 +364,8 @@ Foreach ($dir In $Folders) {
 		If ($file) {
 			$Total_files_counter++
 			$dir_files_counter++
+			$Total_files_counter_formatted = "{0:N0}" -f $Total_files_counter
+			$Total_files_counter_formatted = $Total_files_counter_formatted -replace ",", " "
 			$Total_complete = [math]::Round($Total_files_counter / $Total_files_count * 100)
 			$elapsedTime = $(get-date) - $startTime 
 			$estimatedTotalSeconds = $Total_files_count / $Total_files_counter * $elapsedTime.TotalSeconds 
@@ -348,7 +373,7 @@ Foreach ($dir In $Folders) {
 			$estimatedCompletionTime = $startTime + $estimatedTotalSecondsTS
 			$estimatedCompletionTime = Get-Date -Date $estimatedCompletionTime -Format "yyyy/MM/dd HH:mm:ss"
 			Write-Progress -Id 1 -activity "Estimated Completion Time" -Status "Estimated Completion Time = $estimatedCompletionTime"
-			Write-Progress -Id 2 -parentId 1 -activity "Total Files" -CurrentOperation "Current file: '$file'" -Status "Processing $Total_files_counter of $Total_files_count_formatted ($Total_complete%)" -PercentComplete $Total_complete
+			Write-Progress -Id 2 -parentId 1 -activity "Total Files" -CurrentOperation "Current file: '$file'" -Status "Processing $Total_files_counter_formatted of $Total_files_count_formatted ($Total_complete%)" -PercentComplete $Total_complete
 			$Folder_Complete = [math]::Round($dir_files_counter / $files_count * 100)
 			Write-Progress -Id 4 -parentId 3 -activity "Current Folder Files" -CurrentOperation "Current file: '$file'" -Status "Processing $dir_files_counter of $files_count ($Folder_Complete%)" -PercentComplete $Folder_Complete
 			$temporary = ($counter.ToString().PadLeft($PaddingLength, '0')) + "." + $extension
@@ -394,7 +419,7 @@ $smtpServer = "smtp-mail.outlook.com"
 $smtpFrom = $smtpUser
 $smtpTo = "jacob.w93@gmail.com"
 $messageSubject = "Script execution is complete"
-$messageBody = "The `"rename_pics.ps1`" script execution for input folder `"$InputFolder`" is complete. Please find attached changelog"
+$messageBody = "The `"rename_pics.ps1`" script execution for input folder `"$InputFolder`" is complete. Please find attached changelog if the size is less than 20 MB."
 
 # Define the key (16 bytes for 128-bit key)
 $key = "5243428937038590"  # 16 characters
@@ -440,8 +465,18 @@ $securePass = ConvertTo-SecureString $decryptedPassword -AsPlainText -Force
 # Create a credential object
 $credential = New-Object System.Management.Automation.PSCredential ($smtpUser, $securePass)
 
-# Send email using port 587 for TLS
-Send-MailMessage -From $smtpFrom -To $smtpTo -Subject $messageSubject -Body $messageBody -Attachments "$changelog_FullName" -SmtpServer $smtpServer -Credential $credential -UseSsl -Port 587
+# Path to the log file
+$logFile = "$changelog_FullName"
+
+# Check if the log file size is less than 20 MB (20 * 1024 * 1024 bytes)
+if ((Get-Item $logFile).Length -lt 20MB) {
+	# Attach the log file if it is less than 20 MB
+	Send-MailMessage -From $smtpFrom -To $smtpTo -Subject $messageSubject -Body $messageBody -Attachments $logFile -SmtpServer $smtpServer -Credential $credential -UseSsl -Port 587
+}
+else {
+	# Send email without attachment
+	Send-MailMessage -From $smtpFrom -To $smtpTo -Subject $messageSubject -Body $messageBody -SmtpServer $smtpServer -Credential $credential -UseSsl -Port 587
+}
 
 $q = 0
 Write-Host -ForegroundColor Blue "Press 'Q' to exit."
@@ -462,7 +497,7 @@ while ($true) {
 			break
 		}
 	}
-	if ($q -eq 0) {
+	if (($q -eq 0) -and ($QuitPC -eq 1)) {
 		# Shut down the computer
 		shutdown -s -f -t 60
 	}

@@ -3,7 +3,7 @@ $inputFile = "I:\.ignore\Visual dir size\Visual Directory Size Report - Order By
 $headTagFile = "I:\.ignore\Visual dir size\head_tag.txt"
 $middlePartFile = "I:\.ignore\Visual dir size\middle_part.txt"
 $endPartFile = "I:\.ignore\Visual dir size\end_part.txt"
-$outputFile = "I:\.ignore\Visual dir size\Visual Directory Size Report - output.html"
+$outputFile = "I:\.ignore\Visual dir size\Visual Directory Size Report.html"
 
 # Read input file as a single string with new lines and spaces preserved
 $content = Get-Content -Path $inputFile -Raw

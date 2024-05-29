@@ -316,7 +316,8 @@ If ( $Choose -eq "1" ) {
 			$folder_count = (Get-ChildItem $folder.Parent.FullName -Directory).Count
 			$PaddingLength = $folder_count.ToString().Length
 			$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
-			$tempName = ($number.ToString().PadLeft($PaddingLength, '0'))
+			$randomHex = -join (Get-Random -Count 6 -InputObject (48..57 + 97..102) | ForEach-Object {[char]$_})
+			$tempName = $randomHex + "_" + ($number.ToString().PadLeft($PaddingLength, '0'))
 			$NewName = $folder.Parent.Name + ' - Set ' + $tempName
 			Rename-Item -LiteralPath $($folder.FullName) -NewName $tempName -Force -Verbose -ErrorAction SilentlyContinue
 			Rename-Item -LiteralPath ($($folder.Parent.FullName) + "\" + $tempName) -NewName $NewName -Force -Verbose -ErrorAction SilentlyContinue
@@ -376,7 +377,8 @@ Foreach ($dir In $Folders) {
 			Write-Progress -Id 2 -parentId 1 -activity "Total Files" -CurrentOperation "Current file: '$file'" -Status "Processing $Total_files_counter_formatted of $Total_files_count_formatted ($Total_complete%)" -PercentComplete $Total_complete
 			$Folder_Complete = [math]::Round($dir_files_counter / $files_count * 100)
 			Write-Progress -Id 4 -parentId 3 -activity "Current Folder Files" -CurrentOperation "Current file: '$file'" -Status "Processing $dir_files_counter of $files_count ($Folder_Complete%)" -PercentComplete $Folder_Complete
-			$temporary = ($counter.ToString().PadLeft($PaddingLength, '0')) + "." + $extension
+			$randomHex = -join (Get-Random -Count 6 -InputObject (48..57 + 97..102) | ForEach-Object {[char]$_})
+			$temporary = $randomHex + "_" + ($counter.ToString().PadLeft($PaddingLength, '0')) + "." + $extension
 			$replace = $newdir + "_" + $temporary
 			# Trim spaces and rename the file
 			$image_string = $file.fullname.ToString().Trim()

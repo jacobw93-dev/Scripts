@@ -309,16 +309,15 @@ If ( $Choose -eq "1" ) {
 	$ParentFolders = get-ParentFolders -InputValueString "1" -RenModeString $RenMode -InputFolder $InputFolder -excludedFileTypes $excludedFileTypes | where-object { $_.Name -notin $ExcludedFolderNames }
 	$myChangeLog = [System.Collections.Generic.List[object]]::new()
 	$number = $FolderNumerator
-	
+	$randomHex = -join (Get-Random -Count 6 -InputObject (48..57 + 97..102) | ForEach-Object {[char]$_})
 	foreach ($folder in $ParentFolders) {
 		if ( ($previousfolder.Parent.FullName) -ne ($folder.Parent.FullName) ) { $number = $FolderNumerator }
 		try {
 			$folder_count = (Get-ChildItem $folder.Parent.FullName -Directory).Count
 			$PaddingLength = $folder_count.ToString().Length
 			$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
-			$randomHex = -join (Get-Random -Count 6 -InputObject (48..57 + 97..102) | ForEach-Object {[char]$_})
-			$tempName = $randomHex + "_" + ($number.ToString().PadLeft($PaddingLength, '0'))
-			$NewName = $folder.Parent.Name + ' - Set ' + $tempName
+			$tempName = ($number.ToString().PadLeft($PaddingLength, '0')) + "_" + $randomHex
+			$NewName = $folder.Parent.Name + ' - Set ' + ($number.ToString().PadLeft($PaddingLength, '0'))
 			Rename-Item -LiteralPath $($folder.FullName) -NewName $tempName -Force -Verbose -ErrorAction SilentlyContinue
 			Rename-Item -LiteralPath ($($folder.Parent.FullName) + "\" + $tempName) -NewName $NewName -Force -Verbose -ErrorAction SilentlyContinue
 			$logEntry = $("$Current_timestamp; Renamed directory: '{0}';'{1}' " -f $folder.FullName, $NewName)
@@ -358,6 +357,7 @@ Foreach ($dir In $Folders) {
 	$files_count = ($files).Count
 	$PaddingLength = $files_count.ToString().Length
 	$dir_files_counter = 0
+	$randomHex = -join (Get-Random -Count 6 -InputObject (48..57 + 97..102) | ForEach-Object {[char]$_})
 	Foreach ($file In $files) {
 		$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 		$extension = $file.Extension
@@ -377,16 +377,15 @@ Foreach ($dir In $Folders) {
 			Write-Progress -Id 2 -parentId 1 -activity "Total Files" -CurrentOperation "Current file: '$file'" -Status "Processing $Total_files_counter_formatted of $Total_files_count_formatted ($Total_complete%)" -PercentComplete $Total_complete
 			$Folder_Complete = [math]::Round($dir_files_counter / $files_count * 100)
 			Write-Progress -Id 4 -parentId 3 -activity "Current Folder Files" -CurrentOperation "Current file: '$file'" -Status "Processing $dir_files_counter of $files_count ($Folder_Complete%)" -PercentComplete $Folder_Complete
-			$randomHex = -join (Get-Random -Count 6 -InputObject (48..57 + 97..102) | ForEach-Object {[char]$_})
 			$temporary = $randomHex + "_" + ($counter.ToString().PadLeft($PaddingLength, '0')) + "." + $extension
-			$replace = $newdir + "_" + $temporary
+			$new_img_name = $newdir + "_" + ($counter.ToString().PadLeft($PaddingLength, '0')) + "." + $extension
 			# Trim spaces and rename the file
-			$image_string = $file.fullname.ToString().Trim()
-			# "$split[0] renamed to $replace"
-			$replace = (($replace -Replace $regex_str, ".") -replace '\.+', '.');
-			Rename-Item -LiteralPath "$image_string" "$temporary";
-			Rename-Item -LiteralPath ($($file.DirectoryName) + "\" + $temporary) "$replace";
-			$logEntry = $("$Current_timestamp; Renamed file: '{0}';'{1}'" -f $image_string, $replace)
+			$old_img_name = $file.fullname.ToString().Trim()
+			# "$split[0] renamed to $new_img_name"
+			$new_img_name = (($new_img_name -Replace $regex_str, ".") -replace '\.+', '.');
+			Rename-Item -LiteralPath "$old_img_name" "$temporary";
+			Rename-Item -LiteralPath ($($file.DirectoryName) + "\" + $temporary) "$new_img_name";
+			$logEntry = $("$Current_timestamp; Renamed file: '{0}';'{1}'" -f $old_img_name, $new_img_name)
 			$myChangeLog.Add($logEntry) | Out-Null
 			$counter++
 		}

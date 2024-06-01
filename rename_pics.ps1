@@ -269,9 +269,9 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 			# Check if width is zero to prevent division by zero
 			if ($IsLowQuality) {
 				$i++
-				$destinationFolder = $picture.Directory.Parent.FullName + '\' + $LowQualityName;
-				$destinationFile = $destinationFolder + '\' + $picture.Directory.Name + '_' + $picture.Name;
-				if (-not (Test-Path -Path $destinationFolder -PathType Container)) {
+				$destinationFolder = $picture.Directory.Parent.FullName + '\' + $LowQualityName + '\' + $picture.Directory.Name;
+				$destinationFile = $destinationFolder + '\' + $picture.Name;
+				if (-not (Test-Path -LiteralPath $destinationFolder -PathType Container)) {
 					New-Item -Path $destinationFolder -ItemType Directory
 				}
 				Move-Item -LiteralPath $picture.FullName $destinationFile -Force
@@ -280,9 +280,9 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 			}
 			elseif ($IsContactSheet) {
 				$k++
-				$destinationFolder = $picture.Directory.Parent.FullName + '\' + $ContactSheetsName;
-				$destinationFile = $destinationFolder + '\' + $picture.Directory.Name + '_' + $picture.Name;
-				if (-not (Test-Path -Path $destinationFolder -PathType Container)) {
+				$destinationFolder = $picture.Directory.Parent.FullName + '\' + $ContactSheetsName + '\' + $picture.Directory.Name;
+				$destinationFile = $destinationFolder + '\' + $picture.Name;
+				if (-not (Test-Path -LiteralPath $destinationFolder -PathType Container)) {
 					New-Item -Path $destinationFolder -ItemType Directory
 				}
 				Move-Item -LiteralPath $picture.FullName $destinationFile -Force
@@ -309,7 +309,7 @@ If ( $Choose -eq "1" ) {
 	$ParentFolders = get-ParentFolders -InputValueString "1" -RenModeString $RenMode -InputFolder $InputFolder -excludedFileTypes $excludedFileTypes | where-object { $_.Name -notin $ExcludedFolderNames }
 	$myChangeLog = [System.Collections.Generic.List[object]]::new()
 	$number = $FolderNumerator
-	$randomHex = -join (Get-Random -Count 6 -InputObject (48..57 + 97..102) | ForEach-Object {[char]$_})
+	$randomHex = -join (Get-Random -Count 6 -InputObject (48..57 + 97..102) | ForEach-Object { [char]$_ })
 	foreach ($folder in $ParentFolders) {
 		if ( ($previousfolder.Parent.FullName) -ne ($folder.Parent.FullName) ) { $number = $FolderNumerator }
 		try {
@@ -318,8 +318,13 @@ If ( $Choose -eq "1" ) {
 			$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 			$tempName = ($number.ToString().PadLeft($PaddingLength, '0')) + "_" + $randomHex
 			$NewName = $folder.Parent.Name + ' - Set ' + ($number.ToString().PadLeft($PaddingLength, '0'))
-			Rename-Item -LiteralPath $($folder.FullName) -NewName $tempName -Force -Verbose -ErrorAction SilentlyContinue
-			Rename-Item -LiteralPath ($($folder.Parent.FullName) + "\" + $tempName) -NewName $NewName -Force -Verbose -ErrorAction SilentlyContinue
+			if (!(Test-Path -LiteralPath ($($folder.Parent.FullName) + "\" + $NewName))) {
+				Rename-Item -LiteralPath $($folder.FullName) -NewName $NewName -Force -Verbose -ErrorAction SilentlyContinue
+			}
+			else {
+				Rename-Item -LiteralPath $($folder.FullName) -NewName $tempName -Force -Verbose -ErrorAction SilentlyContinue
+				Rename-Item -LiteralPath ($($folder.Parent.FullName) + "\" + $tempName) -NewName $NewName -Force -Verbose -ErrorAction SilentlyContinue
+			}
 			$logEntry = $("$Current_timestamp; Renamed directory: '{0}';'{1}' " -f $folder.FullName, $NewName)
 			$myChangeLog.Add($logEntry) | Out-Null
 		}
@@ -357,7 +362,7 @@ Foreach ($dir In $Folders) {
 	$files_count = ($files).Count
 	$PaddingLength = $files_count.ToString().Length
 	$dir_files_counter = 0
-	$randomHex = -join (Get-Random -Count 6 -InputObject (48..57 + 97..102) | ForEach-Object {[char]$_})
+	$randomHex = -join (Get-Random -Count 6 -InputObject (48..57 + 97..102) | ForEach-Object { [char]$_ })
 	Foreach ($file In $files) {
 		$Current_timestamp = Get-Date -format "yyyyMMdd_HHmmss"
 		$extension = $file.Extension
@@ -383,8 +388,14 @@ Foreach ($dir In $Folders) {
 			$old_img_name = $file.fullname.ToString().Trim()
 			# "$split[0] renamed to $new_img_name"
 			$new_img_name = (($new_img_name -Replace $regex_str, ".") -replace '\.+', '.');
-			Rename-Item -LiteralPath "$old_img_name" "$temporary";
-			Rename-Item -LiteralPath ($($file.DirectoryName) + "\" + $temporary) "$new_img_name";
+			if (!(Test-Path -LiteralPath ($($file.DirectoryName) + "\" + $new_img_name))) {
+				Rename-Item -LiteralPath "$old_img_name" -NewName "$new_img_name"
+			}
+			else {
+				Rename-Item -LiteralPath "$old_img_name" -NewName "$temporary";
+				Rename-Item -LiteralPath ($($file.DirectoryName) + "\" + $temporary) -NewName "$new_img_name";
+				
+			}
 			$logEntry = $("$Current_timestamp; Renamed file: '{0}';'{1}'" -f $old_img_name, $new_img_name)
 			$myChangeLog.Add($logEntry) | Out-Null
 			$counter++

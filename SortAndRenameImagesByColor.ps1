@@ -14,7 +14,7 @@ function Get-DominantColorHSV {
     
     try {
         # Define the arguments for the ImageMagick command
-        $arguments = "`"$imagePath`" -resize 128x128 -scale 100x100 -colorspace HSL txt:-"
+        $arguments = "`"$imagePath`" -resize 128x128 -scale 10x10 -colorspace HSL txt:-"
 
         # Start the ImageMagick process and capture the output
         $process = Start-Process -FilePath $magickPath -ArgumentList $arguments -NoNewWindow -PassThru -RedirectStandardOutput "output.txt" -RedirectStandardError "error.txt"
@@ -27,17 +27,19 @@ function Get-DominantColorHSV {
         Write-Host "ImageMagick output for $imagePath`:`n$output"
         
         # Adjust the regex to correctly capture the HSL values
-        if ($output -match "hsl\((\d+),(\d+%),(\d+%)\)") {
+        if ($output -match "hsl\((\d+(\.\d+)?),(\d+(\.\d+)?e?-?\d*%),(\d+(\.\d+)?e?-?\d*%)\)") {
             return [PSCustomObject]@{
-                H = [int]$matches[1]
-                S = [int]$matches[2].TrimEnd('%')
-                L = [int]$matches[3].TrimEnd('%')
+                H = [decimal]$matches[1]
+                S = [decimal]$matches[3].TrimEnd('%')
+                L = [decimal]$matches[5].TrimEnd('%')
             }
-        } else {
+        }
+        else {
             Write-Host "Failed to match color data in output for $imagePath."
             Write-Host "Output:`n$output"
         }
-    } catch {
+    }
+    catch {
         Write-Host "Error occurred: $_"
     }
     
@@ -61,16 +63,17 @@ foreach ($image in $imageFiles) {
     $dominantColor = Get-DominantColorHSV -imagePath $image.FullName
     if ($dominantColor) {
         Write-Host "Processed image: $($image.FullName), Color: H=$($dominantColor.H), S=$($dominantColor.S), L=$($dominantColor.L)"
-    } else {
+    }
+    else {
         Write-Host "Failed to process image: $($image.FullName)"
     }
 }
 
 # Sort images by their dominant color (Lightness, then Hue)
-$sortedImages = $imageColors | Sort-Object -Property @{Expression={$_.Color.L}; Ascending=$false}, @{Expression={$_.Color.H}; Ascending=$true}
+$sortedImages = $imageColors | Sort-Object -Property @{Expression = { $_.Color.L }; Ascending = $false }, @{Expression = { $_.Color.H }; Ascending = $true }
 
 # Generate a unique random hex string for this run
-$randomHex = -join (Get-Random -Count 6 -InputObject (48..57 + 97..102) | ForEach-Object {[char]$_})
+$randomHex = -join (Get-Random -Count 6 -InputObject (48..57 + 97..102) | ForEach-Object { [char]$_ })
 
 # Rename sorted images
 $counter = 1

@@ -14,7 +14,7 @@ function Get-DominantColorHSV {
     
     try {
         # Define the arguments for the ImageMagick command
-        $arguments = "`"$imagePath`" -resize 128x128 -scale 10x10 -colorspace HSL txt:-"
+        $arguments = "`"$imagePath`" -resize 128x128 -scale 20x20 -colorspace HSL txt:-"
 
         # Start the ImageMagick process and capture the output
         $process = Start-Process -FilePath $magickPath -ArgumentList $arguments -NoNewWindow -PassThru -RedirectStandardOutput "output.txt" -RedirectStandardError "error.txt"
@@ -25,17 +25,33 @@ function Get-DominantColorHSV {
         
         # Output the content for debugging
         Write-Host "ImageMagick output for $imagePath`:`n$output"
-        
+
+        # Initialize accumulators for H, S, and L values
+        $hValues = @()
+        $sValues = @()
+        $lValues = @()
+
         # Adjust the regex to correctly capture the HSL values
-        if ($output -match "hsl\((\d+(\.\d+)?),(\d+(\.\d+)?e?-?\d*%),(\d+(\.\d+)?e?-?\d*%)\)") {
+        $output -match "hsl\((\d+(\.\d+)?),(\d+(\.\d+)?%)?,(\d+(\.\d+)?%)?\)" | ForEach-Object {
+            $hValues += [decimal]$matches[1]
+            $sValues += [decimal]$matches[3].TrimEnd('%')
+            $lValues += [decimal]$matches[5].TrimEnd('%')
+        }
+
+        # Calculate the average H, S, and L values
+        if ($hValues.Count -gt 0) {
+            $avgH = ($hValues | Measure-Object -Average).Average
+            $avgS = ($sValues | Measure-Object -Average).Average
+            $avgL = ($lValues | Measure-Object -Average).Average
             return [PSCustomObject]@{
-                H = [decimal]$matches[1]
-                S = [decimal]$matches[3].TrimEnd('%')
-                L = [decimal]$matches[5].TrimEnd('%')
+                H = [Math]::Round($avgH, 2)
+                S = [Math]::Round($avgS, 2)
+                L = [Math]::Round($avgL, 2)
+
             }
         }
         else {
-            Write-Host "Failed to match color data in output for $imagePath."
+            Write-Host "No color data matched in output for $imagePath."
             Write-Host "Output:`n$output"
         }
     }

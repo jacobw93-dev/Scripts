@@ -1,23 +1,24 @@
+[Console]::InputEncoding = [System.Text.Encoding]::GetEncoding("Windows-1250")
+
 # Set file paths
 $inputFile = "I:\.ignore\Visual dir size\Visual Directory Size Report - Order By Name.html"
+$inputFile2 = "I:\.ignore\Visual dir size\Visual Directory Size Report - Order By Size.html"
 $headTagFile = "I:\.ignore\Visual dir size\head_tag.txt"
 $middlePartFile = "I:\.ignore\Visual dir size\middle_part.txt"
 $endPartFile = "I:\.ignore\Visual dir size\end_part.txt"
 $outputFile = "I:\.ignore\Visual dir size\Visual Directory Size Report.html"
 
 # Read input file as a single string with new lines and spaces preserved
-$content = Get-Content -Path $inputFile -Raw
+# $content = Get-Content -Path $inputFile -Raw -Encoding Default
 
-# Convert file encoding to UTF8-BOM
-$content = [System.Text.Encoding]::UTF8.GetBytes($content)
-$content = [System.Text.Encoding]::UTF8.GetPreamble() + $content
-$content = [System.Text.Encoding]::UTF8.GetString($content)
-
+# Read input file as a single string with new lines and spaces preserved, specifying the correct encoding (Windows-1250)
+$content = [System.IO.File]::ReadAllText($inputFile, [System.Text.Encoding]::GetEncoding("Windows-1250"))
+$regex = "\d(?=(\d{3})+(?!\d))"
 # Loop through all lines beginning with line number 7 till the end and replace "((?<=\d)\d{3}(?=\D|(?:\d{3})*(?:\D|$)))" with " $1"
 $lines = $content -split "`n"
 for ($i = 6; $i -lt $lines.Length; $i++) {
-    if ($lines[$i] -match "((?<=\d)\d{3}(?=\D|(?:\d{3})*(?:\D|$)))") {
-        $lines[$i] = $lines[$i] -replace "((?<=\d)\d{3}(?=\D|(?:\d{3})*(?:\D|$)))", " $($Matches[0])"
+    if ($lines[$i] -match $regex) {
+        $lines[$i] = [regex]::Replace($lines[$i], $regex, '$& ')
     }
 }
 $content = $lines -join "`n"
@@ -43,7 +44,14 @@ $content = $lines -join "`n"
 $endPartContent = Get-Content -Path $endPartFile -Raw
 $content = $content -replace "</BODY>[\s\S]*?</HTML>", $endPartContent
 
-# Save output to file
-Set-Content -Path $outputFile -Value $content -Encoding UTF8
+# Save output to file as UTF-8 without BOM and force overwrite
+Set-Content -Path $outputFile -Value $content -Encoding UTF8 -Force
+
+Remove-Item $inputFile
+
+# Remove inputFile2 if it exists
+if (Test-Path $inputFile2 -PathType Leaf) {
+    Remove-Item $inputFile2 -Force
+}
 
 pause

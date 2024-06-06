@@ -13,12 +13,12 @@ $outputFile = "I:\.ignore\Visual dir size\Visual Directory Size Report.html"
 
 # Read input file as a single string with new lines and spaces preserved, specifying the correct encoding (Windows-1250)
 $content = [System.IO.File]::ReadAllText($inputFile, [System.Text.Encoding]::GetEncoding("Windows-1250"))
-
+$regex = "\d(?=(\d{3})+(?!\d))"
 # Loop through all lines beginning with line number 7 till the end and replace "((?<=\d)\d{3}(?=\D|(?:\d{3})*(?:\D|$)))" with " $1"
 $lines = $content -split "`n"
 for ($i = 6; $i -lt $lines.Length; $i++) {
-    if ($lines[$i] -match "((?<=\d)\d{3}(?=\D|(?:\d{3})*(?:\D|$)))") {
-        $lines[$i] = $lines[$i] -replace "((?<=\d)\d{3}(?=\D|(?:\d{3})*(?:\D|$)))", " $($Matches[0])"
+    if ($lines[$i] -match $regex) {
+        $lines[$i] = [regex]::Replace($lines[$i], $regex, '$& ')
     }
 }
 $content = $lines -join "`n"

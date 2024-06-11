@@ -154,7 +154,7 @@ function CleanFilesandFolders {
 		$_.extension -notin $fileTypes -and
 		$_.Name -notlike '*changelog*' -and
 		$_.Extension -ne '.txt' } | Remove-Item -Verbose
-	Get-ChildItem $InputFolder -Directory -Recurse | Where-Object { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item -Verbose ;
+	Get-ChildItem -LiteralPath $InputFolder -Directory -Recurse | Where-Object { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item -Verbose ;
 }
 
 $Total_archives_count = (Get-ChildItem -LiteralPath $InputFolder -file -Recurse | where-object { $_.extension -in $CompressedFileTypes } ).Count
@@ -216,7 +216,7 @@ ForEach ($Parent in $ParentFolders) {
 		$myChangeLog.Add($logEntry) | Out-Null	
 	}
 }
-$myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
+$myChangeLog | Out-File -Encoding UTF8 -LiteralPath ($changelog_FullName) -Append;
 
 CleanFilesandFolders
 

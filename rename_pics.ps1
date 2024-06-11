@@ -157,7 +157,7 @@ function CleanFilesandFolders {
 	Get-ChildItem $InputFolder -Directory -Recurse | Where-Object { -NOT $_.GetFiles() -and -not $_.GetDirectories() } | Remove-Item -Verbose ;
 }
 
-$Total_archives_count = (Get-ChildItem $InputFolder -file -Recurse | where-object { $_.extension -in $CompressedFileTypes } ).Count
+$Total_archives_count = (Get-ChildItem -LiteralPath $InputFolder -file -Recurse | where-object { $_.extension -in $CompressedFileTypes } ).Count
 $Archives_count = $Total_archives_count
 If ( $Total_archives_count -ge 1 ) {
 	$ArchivesOnly = ExtractArchivesOnly

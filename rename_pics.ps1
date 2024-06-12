@@ -108,6 +108,7 @@ function SetFolderNumerator {
 	do {
 		Write-Host -ForegroundColor Green "`nSpecify the number from which to start numbering the directories (default: $defaultValue)"
 		$Number_from = Read-Host
+		[System.Console]::SetCursorPosition(0, [System.Console]::CursorTop - 1)
 		if ($Number_from -eq "") {
 			$Number_from = $defaultValue 
 			Write-Host $Number_from

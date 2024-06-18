@@ -204,7 +204,7 @@ function get-ParentFolders {
 	return $ParentFolders
 }
 
-$ParentFolders = get-ParentFolders -InputValueString "1" -RenModeString $RenMode -InputFolder $InputFolder -excludedFileTypes $excludedFileTypes
+$ParentFolders = get-ParentFolders -InputValueString "1" -RenModeString $RenMode -InputFolder $InputFolder -excludedFileTypes $excludedFileTypes | where-object { $_.Name -notin $ExcludedFolderNames }
 
 # For each parent folder get all folders recursively and move to parent
 $myChangeLog = [System.Collections.Generic.List[object]]::new()
@@ -221,7 +221,7 @@ $myChangeLog | Out-File -Encoding UTF8 -LiteralPath ($changelog_FullName) -Appen
 
 CleanFilesandFolders
 
-Write-Host "`nStart time: $startTime"
+Write-Host -ForegroundColor DarkCyan "`nStart time: $startTime"
 
 # Get all images with width and height less than 900 px and move them to separate folder
 Add-Type -AssemblyName System.Drawing

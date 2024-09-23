@@ -5,8 +5,8 @@ $Host.PrivateData.ProgressForegroundColor = 'Black'
 $PSStyle.Progress.View = 'Minimal'
 
 $fileTypes = @('.jpeg', '.jpg', '.png')
-$excludedFileTypes = @('.!qb', '.part', '.zip', '.rar')
-$CompressedFileTypes = @('.zip', '.rar')
+$excludedFileTypes = @('.!qb', '.part', '.zip', '.rar', '.7z')
+$CompressedFileTypes = @('.zip', '.rar', '.7z')
 $regex_str = '[^0-9A-Za-z\.]+';
 $Date = Get-Date -format "yyyyMMdd_HHmmss"
 $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
@@ -432,7 +432,8 @@ $smtpServer = "smtp-mail.outlook.com"
 $smtpFrom = $smtpUser
 $smtpTo = "jacob.w93@gmail.com"
 $messageSubject = "Script execution is complete"
-$messageBody = "The `"rename_pics.ps1`" script execution for input folder `"$InputFolder`" is complete. Please find attached changelog if the size is less than 20 MB."
+$ScriptName = $MyInvocation.MyCommand.Name
+$messageBody = "The `"$ScriptName`" script execution for input folder `"$InputFolder`" is complete. Please find attached changelog if the size is less than 20 MB."
 
 # Define the key (16 bytes for 128-bit key)
 $key = "5243428937038590"  # 16 characters

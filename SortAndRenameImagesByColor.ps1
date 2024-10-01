@@ -14,7 +14,7 @@ function Get-DominantColorHSV {
     
     try {
         # Define the arguments for the ImageMagick command
-        $arguments = "`"$imagePath`" -resize 128x128 -scale 20x20 -colorspace HSL txt:-"
+        $arguments = "`"$imagePath`" -resize 32x32 -scale 10x10 -colorspace HSL txt:-"
 
         # Start the ImageMagick process and capture the output
         $process = Start-Process -FilePath $magickPath -ArgumentList $arguments -NoNewWindow -PassThru -RedirectStandardOutput "output.txt" -RedirectStandardError "error.txt"
@@ -44,9 +44,9 @@ function Get-DominantColorHSV {
             $avgS = ($sValues | Measure-Object -Average).Average
             $avgL = ($lValues | Measure-Object -Average).Average
             return [PSCustomObject]@{
-                H = [Math]::Round($avgH, 2)
-                S = [Math]::Round($avgS, 2)
-                L = [Math]::Round($avgL, 2)
+                H = [Math]::Round($avgH, 3)
+                S = [Math]::Round($avgS, 3)
+                L = [Math]::Round($avgL, 3)
 
             }
         }
@@ -134,3 +134,80 @@ $elapsedTime = (Get-Date) - $startTime
 $elapsedTimeFormatted = "{0:HH\:mm\:ss}" -f [datetime]$elapsedTime.Ticks
 Write-Output "Elapsed time: $elapsedTimeFormatted"
 Write-Output "Completed processing images."
+
+# SMTP server credentials
+$smtpUser = "pshscript@gmail.com"
+$smtpPass = "5KeHjRKRAjsJESrlm0fKqg=="
+
+# Send email notification
+$smtpServer = "smtp.gmail.com"
+$smtpFrom = $smtpUser
+$smtpTo = "jacob.w93@gmail.com"
+$messageSubject = "Script execution is complete"
+$ScriptName = $MyInvocation.MyCommand.Name
+$messageBody = "The `"$ScriptName`" script execution is complete."
+
+# Define the key (16 bytes for 128-bit key)
+$key = "5243428937038590"  # 16 characters
+
+# Define the encrypted password
+$encryptedPassword = $smtpPass
+
+# Convert the key and encrypted password to byte arrays
+$keyBytes = [System.Text.Encoding]::UTF8.GetBytes($key)
+$encryptedBytes = [Convert]::FromBase64String($encryptedPassword)
+
+# Create AES encryption provider
+$aesProvider = New-Object System.Security.Cryptography.AesCryptoServiceProvider
+$aesProvider.KeySize = 128
+$aesProvider.Key = $keyBytes
+
+# Set padding mode to None
+$aesProvider.Padding = [System.Security.Cryptography.PaddingMode]::None
+
+# Set decryption mode to CBC (Cipher Block Chaining)
+$aesProvider.Mode = [System.Security.Cryptography.CipherMode]::CBC
+
+# Set the IV (Initialization Vector) to zeros
+$aesProvider.IV = [byte[]]::new(16)  # 16 bytes for 128-bit IV
+
+# Create decryptor
+$decryptor = $aesProvider.CreateDecryptor()
+
+# Decrypt the password
+try {
+	$decryptedBytes = $decryptor.TransformFinalBlock($encryptedBytes, 0, $encryptedBytes.Length)
+    
+	# Convert decrypted bytes to string
+	$decryptedPassword = [System.Text.Encoding]::UTF8.GetString($decryptedBytes)
+}
+catch {
+	Write-Host "Decryption failed: $_"
+}
+
+# Create a secure string for the password
+$securePass = ConvertTo-SecureString $decryptedPassword -AsPlainText -Force
+
+# Create a credential object
+$credential = New-Object System.Management.Automation.PSCredential ($smtpUser, $securePass)
+
+# Create the MailMessage object
+$mailMessage = New-Object system.net.mail.mailmessage
+$mailMessage.From = $smtpFrom
+$mailMessage.To.Add($smtpTo)
+$mailMessage.Subject = $messageSubject
+$mailMessage.Body = $messageBody
+
+# Configure the SMTP client
+$smtpClient = New-Object system.net.mail.smtpclient($smtpServer, 587)
+$smtpClient.EnableSsl = $true
+$smtpClient.Credentials = New-Object System.Net.NetworkCredential($smtpUser, $decryptedPassword)
+
+# Send the email
+try {
+    $smtpClient.Send($mailMessage)
+    Write-Host "Email sent successfully."
+}
+catch {
+    Write-Host "Failed to send email: $_"
+}

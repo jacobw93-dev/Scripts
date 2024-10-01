@@ -424,11 +424,11 @@ Write-Host -ForegroundColor Green "Process time: $processTimeFormatted (hh:mm:ss
 "`nProcess time: $processTimeFormatted (hh:mm:ss)" | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 
 # SMTP server credentials
-$smtpUser = "my.0wn.n0tificati0n@outlook.com"
-$smtpPass = "2mXorOPE9C0BcG9SZGfjP8FuSzh75Jc9GdP9L2uzMbQ="
+$smtpUser = "pshscript@gmail.com"
+$smtpPass = "5KeHjRKRAjsJESrlm0fKqg=="
 
 # Send email notification
-$smtpServer = "smtp-mail.outlook.com"
+$smtpServer = "smtp.gmail.com"
 $smtpFrom = $smtpUser
 $smtpTo = "jacob.w93@gmail.com"
 $messageSubject = "Script execution is complete"
@@ -483,13 +483,36 @@ $credential = New-Object System.Management.Automation.PSCredential ($smtpUser, $
 $logFile = "$changelog_FullName"
 
 # Check if the log file size is less than 20 MB (20 * 1024 * 1024 bytes)
+$attachment = $null
 if ((Get-Item $logFile).Length -lt 20MB) {
-	# Attach the log file if it is less than 20 MB
-	Send-MailMessage -From $smtpFrom -To $smtpTo -Subject $messageSubject -Body $messageBody -Attachments $logFile -SmtpServer $smtpServer -Credential $credential -UseSsl -Port 587
+    # Attach the log file if it is less than 20 MB
+    $attachment = $logFile
 }
-else {
-	# Send email without attachment
-	Send-MailMessage -From $smtpFrom -To $smtpTo -Subject $messageSubject -Body $messageBody -SmtpServer $smtpServer -Credential $credential -UseSsl -Port 587
+
+# Create the MailMessage object
+$mailMessage = New-Object system.net.mail.mailmessage
+$mailMessage.From = $smtpFrom
+$mailMessage.To.Add($smtpTo)
+$mailMessage.Subject = $messageSubject
+$mailMessage.Body = $messageBody
+
+# Attach log file if applicable
+if ($attachment) {
+    $mailMessage.Attachments.Add($attachment)
+}
+
+# Configure the SMTP client
+$smtpClient = New-Object system.net.mail.smtpclient($smtpServer, 587)
+$smtpClient.EnableSsl = $true
+$smtpClient.Credentials = New-Object System.Net.NetworkCredential($smtpUser, $decryptedPassword)
+
+# Send the email
+try {
+    $smtpClient.Send($mailMessage)
+    Write-Host "Email sent successfully."
+}
+catch {
+    Write-Host "Failed to send email: $_"
 }
 
 $q = 0

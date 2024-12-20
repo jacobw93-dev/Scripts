@@ -72,7 +72,7 @@ function Process-Videos {
 		Write-Progress @progress
 
 		$inputFile = $file.FullName
-		$outputFileName = "$($file.BaseName)_CRF$ffmpeg_qv_HEVC.mp4"
+		$outputFileName = $($file.BaseName) + "_CRF" + $ffmpeg_qv + "_HEVC.mp4"
 		$outputFile = Join-Path $dest_dir $outputFileName
 		Write-Output "Processing $inputFile"
 

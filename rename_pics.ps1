@@ -134,8 +134,8 @@ function ExtractArchives {
 		$archives_counter++
 		$percent_Archive = [math]::Round($archives_counter / $Total_archives_count * 100)
 		Write-Progress -activity "Total Extraction Progress" -CurrentOperation "Current file: '$Archive'" -Status "Processing $archives_counter of $Total_archives_count ($percent_Archive%)" -PercentComplete $percent_Archive
-		$NewName = ($Archive.Name -Replace $regex_str, ".");
-		$NewBaseName = ($Archive.Name -Replace $regex_str, ".");
+		$NewName = ($Archive.Name -Replace $regex_str, ".") -Replace '^\.+', "";
+		$NewBaseName = ($Archive.Name -Replace $regex_str, ".") -Replace '^\.+', "";
 		$NewFullName = ($Archive.FullName -Replace [regex]::Escape($Archive.Name), $NewName);
 		$TargetPath = ($Archive.FullName -Replace [regex]::Escape($Archive.BaseName), $NewBaseName).trimend($Archive.Extension);
 		Rename-Item -LiteralPath $Archive.FullName -NewName $NewName;
@@ -388,7 +388,7 @@ Foreach ($dir In $Folders) {
 			# Trim spaces and rename the file
 			$old_img_name = $file.fullname.ToString().Trim()
 			# "$split[0] renamed to $new_img_name"
-			$new_img_name = (($new_img_name -Replace $regex_str, ".") -replace '\.+', '.');
+			$new_img_name = (($new_img_name -Replace $regex_str, ".") -replace '\.+', '.') -Replace '^\.+', "";
 			if (!(Test-Path -LiteralPath ($($file.DirectoryName) + "\" + $new_img_name))) {
 				Rename-Item -LiteralPath "$old_img_name" -NewName "$new_img_name"
 			}

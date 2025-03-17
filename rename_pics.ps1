@@ -473,12 +473,6 @@ catch {
 	Write-Host "Decryption failed: $_"
 }
 
-# Create a secure string for the password
-$securePass = ConvertTo-SecureString $decryptedPassword -AsPlainText -Force
-
-# Create a credential object
-$credential = New-Object System.Management.Automation.PSCredential ($smtpUser, $securePass)
-
 # Path to the log file
 $logFile = "$changelog_FullName"
 

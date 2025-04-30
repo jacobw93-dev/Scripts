@@ -154,7 +154,7 @@ $smtpPass = "5KeHjRKRAjsJESrlm0fKqg=="
 $smtpServer = "smtp.gmail.com"
 $smtpFrom = $smtpUser
 $smtpTo = "jacob.w93@gmail.com"
-$messageSubject = "Script execution is complete"
+$messageSubject = "Script execution is complete - `"$ScriptName`""
 $ScriptName = $MyInvocation.MyCommand.Name
 $messageBody = "The `"$ScriptName`" script execution is complete."
 

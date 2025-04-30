@@ -151,11 +151,11 @@ $smtpUser = "pshscript@gmail.com"
 $smtpPass = "5KeHjRKRAjsJESrlm0fKqg=="
 
 # Send email notification
+$ScriptName = $MyInvocation.MyCommand.Name
 $smtpServer = "smtp.gmail.com"
 $smtpFrom = $smtpUser
 $smtpTo = "jacob.w93@gmail.com"
 $messageSubject = "Script execution is complete - `"$ScriptName`""
-$ScriptName = $MyInvocation.MyCommand.Name
 $messageBody = "The `"$ScriptName`" script execution is complete."
 
 # Define the key (16 bytes for 128-bit key)

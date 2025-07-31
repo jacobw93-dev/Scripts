@@ -265,7 +265,7 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 			$Image.Dispose()
 
 			# Define conditions
-			$IsLowQuality = ($Width -lt 900 -and $Height -lt 900)
+			$IsLowQuality = ($Width -lt 900 -and $Height -lt 900) -or ($picture.Name -match "cover")
 			$IsContactSheet = ($AspectRatio -ge 2) -or ($picture.Name -match "contactsheet|cs")
 			# Check if width is zero to prevent division by zero
 			if ($IsLowQuality) {

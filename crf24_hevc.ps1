@@ -5,27 +5,27 @@ $dest_dir = "E:\.ignore\Videos\Compressed"
 
 
 function Get-UserChoice {
-    param(
-        [string]$Question
-    )
+	param(
+		[string]$Question
+	)
 
-    $answer = $null
-    while (@("y", "n") -notcontains $answer) {
-        Write-Host -ForegroundColor Green "`n$Question Y (Yes), N (No)"
-        $answer = Read-Host
-        $answer = $answer.ToLower().Trim()
-        switch ($answer) {
-            y { $Chosen = "1" }
-            n { $Chosen = "0" }
-        }
-        if (@("y", "n") -notcontains $answer) { Write-Host -ForegroundColor Red "Enter the correct value"; pause }
-    }
-    return $Chosen
+	$answer = $null
+	while (@("y", "n") -notcontains $answer) {
+		Write-Host -ForegroundColor Green "`n$Question Y (Yes), N (No)"
+		$answer = Read-Host
+		$answer = $answer.ToLower().Trim()
+		switch ($answer) {
+			y { $Chosen = "1" }
+			n { $Chosen = "0" }
+		}
+		if (@("y", "n") -notcontains $answer) { Write-Host -ForegroundColor Red "Enter the correct value"; pause }
+	}
+	return $Chosen
 }
 
 function ShutdownComputer {
-    $Chosen = Get-UserChoice -Question "Should I shutdown computer after script completion?"
-    return $Chosen
+	$Chosen = Get-UserChoice -Question "Should I shutdown computer after script completion?"
+	return $Chosen
 }
 
 $QuitPC = ShutdownComputer
@@ -33,38 +33,39 @@ $QuitPC = ShutdownComputer
 
 # Function to check if a file is locked by another process
 function Is-FileLocked {
-    param (
-        [string]$filePath
-    )
-    try {
-        $fileStream = [System.IO.File]::Open($filePath, 'Open', 'ReadWrite', 'None')
-        if ($fileStream) {
-            $fileStream.Close()
-            return $false
-        }
-    } catch {
-        return $true
-    }
+	param (
+		[string]$filePath
+	)
+	try {
+		$fileStream = [System.IO.File]::Open($filePath, 'Open', 'ReadWrite', 'None')
+		if ($fileStream) {
+			$fileStream.Close()
+			return $false
+		}
+	}
+ catch {
+		return $true
+	}
 }
 
 function Process-Videos {
-    param (
-        [string]$directory
-    )
-    Write-Output "Changing to directory $directory"
-    Set-Location $directory
+	param (
+		[string]$directory
+	)
+	Write-Output "Changing to directory $directory"
+	Set-Location $directory
 
-    # Get the video files
-    $videoFiles = Get-ChildItem -Recurse -Include *.avi, *.flv, *.m2ts, *.mkv, *.mov, *.mp4, *.mpg, *.mts, *.ts, *.wmv
-    $totalFiles = $videoFiles.Count
-    $i = 0
+	# Get the video files
+	$videoFiles = Get-ChildItem -Recurse -Include *.avi, *.flv, *.m2ts, *.mkv, *.mov, *.mp4, *.mpg, *.mts, *.ts, *.wmv
+	$totalFiles = $videoFiles.Count
+	$i = 0
 
-    # Progress bar
-    $progress = @{
-        Activity        = "Processing Videos"
-        Status          = "Processing"
-        PercentComplete = 0
-    }
+	# Progress bar
+	$progress = @{
+		Activity        = "Processing Videos"
+		Status          = "Processing"
+		PercentComplete = 0
+	}
 
 	foreach ($file in $videoFiles) {
 		$i++
@@ -72,8 +73,18 @@ function Process-Videos {
 		Write-Progress @progress
 
 		$inputFile = $file.FullName
+		# Build relative path from the root directory passed to Process-Videos
+		$relativePath = $file.DirectoryName.Substring($directory.Length).TrimStart('\', '/')
+    
+		# Full output directory path preserving structure
+		$outputDir = Join-Path $dest_dir $relativePath
+    
+		# Ensure directory exists
+		if (-not (Test-Path $outputDir)) {
+			New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+		}
 		$outputFileName = $($file.BaseName) + "_CRF" + $ffmpeg_qv + "_HEVC.mp4"
-		$outputFile = Join-Path $dest_dir $outputFileName
+		$outputFile = Join-Path $outputDir $outputFileName
 		Write-Output "Processing $inputFile"
 
 		# Get the size of the source file
@@ -110,23 +121,28 @@ function Process-Videos {
 				Write-Output "Compression successful. Deleting source file: $inputFile"
 				try {
 					Remove-Item -LiteralPath $inputFile -Force
-				} catch {
+				}
+				catch {
 					Write-Output "Failed to delete source file: $inputFile. Error: $_"
 				}
-			} else {
+			}
+			else {
 				Write-Output "Output file size is greater than or equal to source file. Deleting output file: $outputFile"
 				try {
 					Remove-Item -LiteralPath $outputFile -Force
-				} catch {
+				}
+				catch {
 					Write-Output "Failed to delete output file: $outputFile. Error: $_"
 				}
 			}
-		} else {
+		}
+		else {
 			Write-Output "Compression failed for $inputFile. Removing incomplete output file: $outputFile"
 			if (Test-Path -LiteralPath $outputFile) {
 				try {
 					Remove-Item -LiteralPath $outputFile -Force
-				} catch {
+				}
+				catch {
 					Write-Output "Failed to delete output file: $outputFile. Error: $_"
 				}
 			}
@@ -137,13 +153,13 @@ function Process-Videos {
 
 # Check if paths file exists and iterate through it
 if (Test-Path $pathsFile) {
-    Get-Content $pathsFile | ForEach-Object {
-        Process-Videos -directory $_
-    }
+	Get-Content $pathsFile | ForEach-Object {
+		Process-Videos -directory $_
+	}
 }
 else {
-    # Paths file doesn't exist, process current directory
-    Process-Videos -directory (Get-Location)
+	# Paths file doesn't exist, process current directory
+	Process-Videos -directory (Get-Location)
 }
 
 # SMTP server credentials
@@ -216,15 +232,15 @@ $smtpClient.Credentials = New-Object System.Net.NetworkCredential($smtpUser, $de
 
 # Send the email
 try {
-    $smtpClient.Send($mailMessage)
-    Write-Host "Email sent successfully."
+	$smtpClient.Send($mailMessage)
+	Write-Host "Email sent successfully."
 }
 catch {
-    Write-Host "Failed to send email: $_"
+	Write-Host "Failed to send email: $_"
 }
 
 
 if ($QuitPC -eq 1) {
-    # Shut down the computer
-    shutdown -s -f -t 60
+	# Shut down the computer
+	shutdown -s -f -t 60
 }

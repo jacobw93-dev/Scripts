@@ -83,49 +83,55 @@ $totalImages = $imageFiles.Count
 $processedImages = 0
 $progressIndex = 0
 
-foreach ($image in $imageFiles) {
-    $processedImages++
-    $dominantColor = Get-DominantColorHSV -imagePath $image.FullName
-    if ($dominantColor) {
-        $imageColors += [PSCustomObject]@{Path = $image.FullName; Color = $dominantColor }
-        Write-Host "Processed image: $($image.FullName), Color: H=$($dominantColor.H), S=$($dominantColor.S), L=$($dominantColor.L)"
-    }
-    else {
-        Write-Host "Failed to process image: $($image.FullName)"
-    }
-    $progressIndex = [math]::Floor(($processedImages / $totalImages) * 100)
-    $elapsedTime = (Get-Date) - $startTime
-    $estimatedRemaining = ($elapsedTime.TotalSeconds / $processedImages) * ($totalImages - $processedImages)
-    Write-Progress -Activity "Processing Images" -Status "Processed $processedImages of $totalImages images" -PercentComplete $progressIndex -SecondsRemaining $estimatedRemaining
+if ($totalImages -gt 0) {
+	foreach ($image in $imageFiles) {
+		$processedImages++
+		$dominantColor = Get-DominantColorHSV -imagePath $image.FullName
+		if ($dominantColor) {
+			$imageColors += [PSCustomObject]@{Path = $image.FullName; Color = $dominantColor }
+			Write-Host "Processed image: $($image.FullName), Color: H=$($dominantColor.H), S=$($dominantColor.S), L=$($dominantColor.L)"
+		}
+		else {
+			Write-Host "Failed to process image: $($image.FullName)"
+		}
+		$progressIndex = [math]::Floor(($processedImages / $totalImages) * 100)
+		$elapsedTime = (Get-Date) - $startTime
+		$estimatedRemaining = ($elapsedTime.TotalSeconds / $processedImages) * ($totalImages - $processedImages)
+		Write-Progress -Activity "Processing Images" -Status "Processed $processedImages of $totalImages images" -PercentComplete $progressIndex -SecondsRemaining $estimatedRemaining
+	}
+
+	# Sort images by their dominant color (Lightness, then Hue)
+	$sortedImages = $imageColors | Sort-Object -Property @{Expression = { $_.Color.L }; Ascending = $false }, @{Expression = { $_.Color.H }; Ascending = $true }
+
+	# Generate a unique random hex string for this run
+	$randomHex = -join (Get-Random -Count 6 -InputObject (48..57 + 97..102) | ForEach-Object { [char]$_ })
+
+	# Rename sorted images with progress bar
+	$totalImages = $sortedImages.Count
+	$renamedImages = 0
+	$progressIndex = 0
+
+	$counter = 1
+	foreach ($image in $sortedImages) {
+		$renamedImages++
+		$newName = "H{1}_S{2}_L{3}_{5}_{0:D4}{4}" -f $counter, $image.Color.H, $image.Color.S, $image.Color.L, [System.IO.Path]::GetExtension($image.Path), $randomHex
+		$newPath = Join-Path -Path $imageDirectory -ChildPath $newName
+		Rename-Item -Path $image.Path -NewName $newPath -Verbose
+		$counter++
+
+		$progressIndex = [math]::Floor(($renamedImages / $totalImages) * 100)
+		$elapsedTime = (Get-Date) - $startTime
+		$estimatedRemaining = ($elapsedTime.TotalSeconds / ($totalImages + $processedImages)) * ($totalImages - $renamedImages)
+		Write-Progress -Activity "Renaming Images" -Status "Renamed $renamedImages of $totalImages images" -PercentComplete $progressIndex -SecondsRemaining $estimatedRemaining
+	}
+} else {
+    Write-Host "No images found to rename." -ForegroundColor Yellow
 }
 
-# Sort images by their dominant color (Lightness, then Hue)
-$sortedImages = $imageColors | Sort-Object -Property @{Expression = { $_.Color.L }; Ascending = $false }, @{Expression = { $_.Color.H }; Ascending = $true }
-
-# Generate a unique random hex string for this run
-$randomHex = -join (Get-Random -Count 6 -InputObject (48..57 + 97..102) | ForEach-Object { [char]$_ })
-
-# Rename sorted images with progress bar
-$totalImages = $sortedImages.Count
-$renamedImages = 0
-$progressIndex = 0
-
-$counter = 1
-foreach ($image in $sortedImages) {
-    $renamedImages++
-    $newName = "H{1}_S{2}_L{3}_{5}_{0:D4}{4}" -f $counter, $image.Color.H, $image.Color.S, $image.Color.L, [System.IO.Path]::GetExtension($image.Path), $randomHex
-    $newPath = Join-Path -Path $imageDirectory -ChildPath $newName
-    Rename-Item -Path $image.Path -NewName $newPath -Verbose
-    $counter++
-
-    $progressIndex = [math]::Floor(($renamedImages / $totalImages) * 100)
-    $elapsedTime = (Get-Date) - $startTime
-    $estimatedRemaining = ($elapsedTime.TotalSeconds / ($totalImages + $processedImages)) * ($totalImages - $renamedImages)
-    Write-Progress -Activity "Renaming Images" -Status "Renamed $renamedImages of $totalImages images" -PercentComplete $progressIndex -SecondsRemaining $estimatedRemaining
+# Clean up temporary file (only if it exists)
+if (Test-Path "output.txt") {
+    Remove-Item "output.txt" -Verbose
 }
-
-# Clean up temporary file
-Remove-Item "output.txt" -Verbose
 
 # Calculate total elapsed time
 $elapsedTime = (Get-Date) - $startTime

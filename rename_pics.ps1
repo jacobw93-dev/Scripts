@@ -421,7 +421,7 @@ clear-host
 
 # Write process time to console
 Write-Host -ForegroundColor Green "Process time: $processTimeFormatted (hh:mm:ss)"
-"`nProcess time: $processTimeFormatted (hh:mm:ss)" | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
+"`nProcess time: $processTimeFormatted (hh:mm:ss)" | Out-File -Encoding UTF8 -LiteralPath ($changelog_FullName) -Append;
 
 # SMTP server credentials
 $smtpUser = "pshscript@gmail.com"

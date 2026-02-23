@@ -478,7 +478,7 @@ $logFile = "$changelog_FullName"
 
 # Check if the log file size is less than 20 MB (20 * 1024 * 1024 bytes)
 $attachment = $null
-if ((Get-Item $logFile).Length -lt 20MB) {
+if ((Get-Item -LiteralPath $logFile).Length -lt 20MB) {
     # Attach the log file if it is less than 20 MB
     $attachment = $logFile
 }

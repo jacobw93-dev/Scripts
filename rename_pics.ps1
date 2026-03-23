@@ -42,7 +42,7 @@ $InputFolder = SelectInputFolder
 Set-ItemProperty $key Hidden 0
 Set-ItemProperty $key ShowSuperHidden 0
 # Stop-Process -processname explorer
-$changelog_FullName = "$InputFolder" + '\' + "changelog_" + ((Get-Item -Path $InputFolder).BaseName -Replace $regex_str, "_") + "_" + $Date + ".txt"
+$changelog_FullName = "$InputFolder" + '\' + "changelog_" + ((Get-Item -LiteralPath $InputFolder).BaseName -Replace $regex_str, "_") + "_" + $Date + ".txt"
 
 # determine whether to rename subfolders of the previously specified $InputFolder directory. In case of option [1] the script should rename the folders inside the given folder, otherwise [2] only their subfolders.
 

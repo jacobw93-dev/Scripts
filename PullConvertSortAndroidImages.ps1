@@ -14,11 +14,11 @@
 
 [CmdletBinding()]
 param(
-    [string]$LocalRoot      = "D:\Downloads\Pics",
-    [string]$UnsortedDir    = "D:\Downloads\Pics\unsorted",
-    [string]$SortedDir      = "D:\Downloads\Pics\sorted",
+    [string]$LocalRoot = "D:\Downloads\Pics",
+    [string]$UnsortedDir = "D:\Downloads\Pics\unsorted",
+    [string]$SortedDir = "D:\Downloads\Pics\sorted",
 
-    [string]$IrfanViewPath  = "C:\Program Files\IrfanView\i_view64.exe",
+    [string]$IrfanViewPath = "C:\Program Files\IrfanView\i_view64.exe",
 
     [string]$ColorSortScript = "$env:USERPROFILE\Desktop\Scripts\SortAndRenameImagesByColor.ps1",
 
@@ -119,10 +119,10 @@ function Get-SafeDestinationPath {
         [string]$FileName
     )
 
-    $baseName  = [System.IO.Path]::GetFileNameWithoutExtension($FileName)
+    $baseName = [System.IO.Path]::GetFileNameWithoutExtension($FileName)
     $extension = [System.IO.Path]::GetExtension($FileName)
     $candidate = Join-Path $DestinationDirectory $FileName
-    $counter   = 1
+    $counter = 1
 
     while (Test-Path -LiteralPath $candidate) {
         $candidate = Join-Path $DestinationDirectory ("{0}_{1}{2}" -f $baseName, $counter, $extension)
@@ -250,14 +250,14 @@ function Remove-EmptyDirectories {
     Write-Section "Removing empty local directories"
 
     Get-ChildItem -LiteralPath $Directory -Directory -Recurse |
-        Sort-Object FullName -Descending |
-        Where-Object {
-            -not (Get-ChildItem -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue)
-        } |
-        ForEach-Object {
-            Write-Host "Removing empty directory: $($_.FullName)" -ForegroundColor DarkGray
-            Remove-Item -LiteralPath $_.FullName -Force
-        }
+    Sort-Object FullName -Descending |
+    Where-Object {
+        -not (Get-ChildItem -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue)
+    } |
+    ForEach-Object {
+        Write-Host "Removing empty directory: $($_.FullName)" -ForegroundColor DarkGray
+        Remove-Item -LiteralPath $_.FullName -Force
+    }
 }
 
 function Move-FilesToDirectory {
@@ -302,7 +302,7 @@ try {
     $adbDevices | ForEach-Object { Write-Host $_ }
 
     $connectedDevices = $adbDevices |
-        Where-Object { $_ -match "\sdevice\s" -and $_ -notmatch "^List of devices" }
+    Where-Object { $_ -match "\sdevice\s" -and $_ -notmatch "^List of devices" }
 
     if (-not $connectedDevices) {
         throw "No authorized Android device detected. Check USB connection and Android USB debugging authorization."
@@ -310,18 +310,32 @@ try {
 
     Write-Section "Pulling Android directories"
 
+    $PulledAndroidDirectories = @()
+
     foreach ($androidDir in $AndroidDirectories) {
+        Write-Host "Checking Android directory: $androidDir" -ForegroundColor Yellow
+
+        adb shell "test -d '$androidDir'"
+    
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Android directory does not exist, skipping: $androidDir"
+            continue
+        }
+
         Write-Host "Pulling: $androidDir -> $LocalRoot" -ForegroundColor Yellow
         adb pull --sync $androidDir $LocalRoot
 
         if ($LASTEXITCODE -ne 0) {
-            throw "adb pull failed for: $androidDir"
+            Write-Warning "adb pull failed, skipping further processing for: $androidDir"
+            continue
         }
+
+        $PulledAndroidDirectories += $androidDir
     }
 
     Write-Section "Moving pulled files into unsorted directory"
 
-    foreach ($androidDir in $AndroidDirectories) {
+    foreach ($androidDir in $PulledAndroidDirectories) {
         $folderName = Split-Path $androidDir -Leaf
         $localPulledDir = Join-Path $LocalRoot $folderName
 
@@ -334,9 +348,9 @@ try {
     }
 
     if ($DeleteAndroidSourceAfterPull) {
-        Write-Section "Deleting Android source directories"
+        Write-Section "Deleting successfully pulled Android source directories"
 
-        foreach ($androidDir in $AndroidDirectories) {
+        foreach ($androidDir in $PulledAndroidDirectories) {
             Write-Host "Deleting from Android: $androidDir" -ForegroundColor Yellow
             adb shell "rm -rf '$androidDir'"
 

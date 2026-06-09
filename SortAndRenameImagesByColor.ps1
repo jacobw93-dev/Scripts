@@ -1,3 +1,8 @@
+param (
+    [Parameter(Mandatory = $false)]
+    [string]$ImageDirectory
+)
+
 Clear-Host
 
 # Path to the ImageMagick executable
@@ -62,17 +67,25 @@ function Get-DominantColorHSV {
     return $null
 }
 
-# Prompt the user for the directory containing the images
-$imageDirectory = Read-Host "Please enter the path to the directory containing your images"
-
-# Validate if the directory exists
-if (-Not (Test-Path -Path $imageDirectory)) {
-    Write-Output "The directory '$imageDirectory' does not exist. Please provide a valid directory."
-    exit
+# If ImageDirectory was not passed as input parameter, ask interactively
+if ([string]::IsNullOrWhiteSpace($ImageDirectory)) {
+    $ImageDirectory = Read-Host "Please enter the path to the directory containing your images"
 }
 
+# Remove possible surrounding quotes and resolve full path
+$ImageDirectory = $ImageDirectory.Trim('"')
+
+# Validate if the directory exists
+if (-not (Test-Path -LiteralPath $ImageDirectory -PathType Container)) {
+    Write-Host "The directory '$ImageDirectory' does not exist. Please provide a valid directory." -ForegroundColor Red
+    exit 1
+}
+
+# Normalize path
+$ImageDirectory = (Resolve-Path -LiteralPath $ImageDirectory).Path
+
 # Get all image files in the directory with valid extensions
-$imageFiles = Get-ChildItem -Path $imageDirectory -File | Where-Object { $_.Extension -in $validExtensions }
+$imageFiles = Get-ChildItem -Path $ImageDirectory -File | Where-Object { $_.Extension -in $validExtensions }
 
 # Start timing
 $startTime = Get-Date
@@ -115,7 +128,7 @@ if ($totalImages -gt 0) {
 	foreach ($image in $sortedImages) {
 		$renamedImages++
 		$newName = "H{1}_S{2}_L{3}_{5}_{0:D4}{4}" -f $counter, $image.Color.H, $image.Color.S, $image.Color.L, [System.IO.Path]::GetExtension($image.Path), $randomHex
-		$newPath = Join-Path -Path $imageDirectory -ChildPath $newName
+		$newPath = Join-Path -Path $ImageDirectory -ChildPath $newName
 		Rename-Item -Path $image.Path -NewName $newPath -Verbose
 		$counter++
 

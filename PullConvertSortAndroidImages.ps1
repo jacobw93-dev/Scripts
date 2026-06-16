@@ -24,6 +24,14 @@ param(
 
     [int]$JpegQuality = 90,
 
+    [string]$AndroidExcludedMediaDir = "/sdcard/Pictures/.hide/gif",
+
+    [string[]]$ExcludedAndroidExtensions = @(
+        "gif",
+        "mp4",
+        "webm"
+    ),
+
     [switch]$DeleteAndroidSourceAfterPull = $true,
     [switch]$DeleteWebpAfterConversion = $true
 )
@@ -107,6 +115,135 @@ function Assert-PathExists {
 
     if (-not (Test-Path -LiteralPath $Path)) {
         throw "$Description not found: $Path"
+    }
+}
+
+
+function ConvertTo-AdbShellSingleQuoted {
+    param([Parameter(Mandatory)][string]$Text)
+
+    # Android shell-safe single quoted string.
+    # Example: abc'def -> 'abc'\''def'
+    return "'" + ($Text -replace "'", "'\\''") + "'"
+}
+
+function Invoke-AdbShellTestDirectory {
+    param([Parameter(Mandatory)][string]$AndroidPath)
+
+    $quotedPath = ConvertTo-AdbShellSingleQuoted -Text $AndroidPath
+    adb shell "test -d $quotedPath"
+    return ($LASTEXITCODE -eq 0)
+}
+
+function Invoke-AdbShellTestPath {
+    param([Parameter(Mandatory)][string]$AndroidPath)
+
+    $quotedPath = ConvertTo-AdbShellSingleQuoted -Text $AndroidPath
+    adb shell "test -e $quotedPath"
+    return ($LASTEXITCODE -eq 0)
+}
+
+function New-AndroidDirectory {
+    param([Parameter(Mandatory)][string]$AndroidPath)
+
+    $quotedPath = ConvertTo-AdbShellSingleQuoted -Text $AndroidPath
+    adb shell "mkdir -p $quotedPath"
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to create Android directory: $AndroidPath"
+    }
+}
+
+function Get-AndroidFileName {
+    param([Parameter(Mandatory)][string]$AndroidPath)
+
+    return ($AndroidPath -replace '^.*/', '')
+}
+
+function Get-AndroidSafeDestinationPath {
+    param(
+        [Parameter(Mandatory)][string]$DestinationDirectory,
+        [Parameter(Mandatory)][string]$FileName
+    )
+
+    $baseName = [System.IO.Path]::GetFileNameWithoutExtension($FileName)
+    $extension = [System.IO.Path]::GetExtension($FileName)
+
+    if ([string]::IsNullOrWhiteSpace($baseName)) {
+        $baseName = $FileName
+        $extension = ""
+    }
+
+    $candidate = "$DestinationDirectory/$FileName"
+    $counter = 1
+
+    while (Invoke-AdbShellTestPath -AndroidPath $candidate) {
+        $candidate = "$DestinationDirectory/$baseName`_$counter$extension"
+        $counter++
+    }
+
+    return $candidate
+}
+
+function Move-ExcludedAndroidMediaToQuarantine {
+    param(
+        [Parameter(Mandatory)][string[]]$SourceDirectories,
+        [Parameter(Mandatory)][string]$DestinationDirectory,
+        [Parameter(Mandatory)][string[]]$Extensions
+    )
+
+    Write-Section "Moving excluded Android media files to quarantine"
+
+    New-AndroidDirectory -AndroidPath $DestinationDirectory
+
+    $normalizedExtensions = $Extensions |
+        ForEach-Object { $_.Trim().TrimStart('.').ToLowerInvariant() } |
+        Where-Object { $_ }
+
+    if (-not $normalizedExtensions) {
+        Write-Host "No excluded Android extensions configured."
+        return
+    }
+
+    foreach ($androidDir in $SourceDirectories) {
+        Write-Host "Checking source directory for excluded media: $androidDir" -ForegroundColor Yellow
+
+        if (-not (Invoke-AdbShellTestDirectory -AndroidPath $androidDir)) {
+            Write-Warning "Android directory does not exist, skipping excluded-media move: $androidDir"
+            continue
+        }
+
+        $findParts = foreach ($extension in $normalizedExtensions) {
+            "-iname '*.$extension'"
+        }
+
+        $findExpression = $findParts -join " -o "
+        $quotedSource = ConvertTo-AdbShellSingleQuoted -Text $androidDir
+        $findCommand = "find $quotedSource -type f \( $findExpression \)"
+
+        $excludedFiles = @(adb shell $findCommand) |
+            ForEach-Object { $_.Trim() } |
+            Where-Object { $_ }
+
+        if (-not $excludedFiles) {
+            Write-Host "No excluded media found in: $androidDir"
+            continue
+        }
+
+        foreach ($sourceFile in $excludedFiles) {
+            $fileName = Get-AndroidFileName -AndroidPath $sourceFile
+            $destinationFile = Get-AndroidSafeDestinationPath -DestinationDirectory $DestinationDirectory -FileName $fileName
+
+            $quotedSourceFile = ConvertTo-AdbShellSingleQuoted -Text $sourceFile
+            $quotedDestinationFile = ConvertTo-AdbShellSingleQuoted -Text $destinationFile
+
+            Write-Host "Moving on Android: $sourceFile -> $destinationFile" -ForegroundColor Yellow
+            adb shell "mv $quotedSourceFile $quotedDestinationFile"
+
+            if ($LASTEXITCODE -ne 0) {
+                Write-Warning "Failed to move excluded media file on Android: $sourceFile"
+            }
+        }
     }
 }
 
@@ -308,6 +445,11 @@ try {
         throw "No authorized Android device detected. Check USB connection and Android USB debugging authorization."
     }
 
+    Move-ExcludedAndroidMediaToQuarantine `
+        -SourceDirectories $AndroidDirectories `
+        -DestinationDirectory $AndroidExcludedMediaDir `
+        -Extensions $ExcludedAndroidExtensions
+
     Write-Section "Pulling Android directories"
 
     $PulledAndroidDirectories = @()
@@ -315,9 +457,7 @@ try {
     foreach ($androidDir in $AndroidDirectories) {
         Write-Host "Checking Android directory: $androidDir" -ForegroundColor Yellow
 
-        adb shell "test -d '$androidDir'"
-    
-        if ($LASTEXITCODE -ne 0) {
+        if (-not (Invoke-AdbShellTestDirectory -AndroidPath $androidDir)) {
             Write-Warning "Android directory does not exist, skipping: $androidDir"
             continue
         }
@@ -352,7 +492,8 @@ try {
 
         foreach ($androidDir in $PulledAndroidDirectories) {
             Write-Host "Deleting from Android: $androidDir" -ForegroundColor Yellow
-            adb shell "rm -rf '$androidDir'"
+            $quotedAndroidDir = ConvertTo-AdbShellSingleQuoted -Text $androidDir
+            adb shell "rm -rf $quotedAndroidDir"
 
             if ($LASTEXITCODE -ne 0) {
                 Write-Warning "adb shell rm failed for: $androidDir"

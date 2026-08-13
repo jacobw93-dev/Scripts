@@ -1,0 +1,1 @@
+Send-MailMessage -From 'noreply@humio.com' -To 'jeuc@dsb.dk','NOHO@dsb.dk','xalind@dsb.dk','xjaka@dsb.dk' -Subject 'Warning! The password for the user sapadm on the vssapmsg01p server expires in 3 days' -Body 'The password for the user sapadm on the vssapmsg01p server expires in 3 days' -SmtpServer 'mailhub.dsb.dk'

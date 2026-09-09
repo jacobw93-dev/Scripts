@@ -6,6 +6,7 @@ $dest_dir = "E:\.ignore\Videos\Compressed"
 # Execution statistics
 $scriptStartTime = Get-Date
 $script:PathsProcessed = 0
+$script:ProcessedPaths = [System.Collections.Generic.List[string]]::new()
 $script:FilesFound = 0
 $script:FilesConverted = 0
 $script:ConversionErrors = 0
@@ -64,6 +65,7 @@ function Process-Videos {
 	)
 	Write-Output "Changing to directory $directory"
 	$script:PathsProcessed++
+	$script:ProcessedPaths.Add($directory)
 	try {
 		Set-Location -LiteralPath $directory -ErrorAction Stop
 	}
@@ -217,6 +219,10 @@ $durationText = if ($scriptDuration.TotalHours -ge 1) {
 }
 
 $conversionStatus = if ($script:ConversionErrors -eq 0) { "No conversion errors detected" } else { "$($script:ConversionErrors) conversion/path error(s) detected" }
+$processedPathsText = if ($script:ProcessedPaths.Count -gt 0) {
+	"`r`nProcessed paths:`r`n- " + ($script:ProcessedPaths -join "`r`n- ")
+} else { "" }
+
 $failedFilesText = if ($script:FailedFiles.Count -gt 0) {
 	"`r`nFailed items:`r`n- " + ($script:FailedFiles -join "`r`n- ")
 } else { "" }
@@ -236,6 +242,7 @@ Summary:
 - Conversion errors:    $($script:ConversionErrors)
 - Source delete errors: $($script:SourceDeleteErrors)
 - Conversion status:    $conversionStatus
+$processedPathsText
 $failedFilesText
 "@
 

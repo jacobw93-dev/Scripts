@@ -1,4 +1,4 @@
-# Default variables
+﻿# Default variables
 $pathsFile = "paths.txt"
 $ffmpeg_qv = 24
 $dest_dir = "E:\.ignore\Videos\Compressed"
@@ -154,7 +154,14 @@ function Process-Videos {
 # Check if paths file exists and iterate through it
 if (Test-Path $pathsFile) {
 	Get-Content $pathsFile | ForEach-Object {
-		Process-Videos -directory $_
+		$path = $_.Trim()
+
+		# Skip empty lines and commented-out paths
+		if ([string]::IsNullOrWhiteSpace($path) -or $path.StartsWith('#')) {
+			return
+		}
+
+		Process-Videos -directory $path
 	}
 }
 else {

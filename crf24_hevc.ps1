@@ -3,6 +3,16 @@ $pathsFile = "paths.txt"
 $ffmpeg_qv = 24
 $dest_dir = "E:\.ignore\Videos\Compressed"
 
+# Execution statistics
+$scriptStartTime = Get-Date
+$script:PathsProcessed = 0
+$script:FilesFound = 0
+$script:FilesConverted = 0
+$script:ConversionErrors = 0
+$script:FilesNotSmaller = 0
+$script:SourceDeleteErrors = 0
+$script:FailedFiles = [System.Collections.Generic.List[string]]::new()
+
 
 function Get-UserChoice {
 	param(
@@ -53,11 +63,21 @@ function Process-Videos {
 		[string]$directory
 	)
 	Write-Output "Changing to directory $directory"
-	Set-Location $directory
+	$script:PathsProcessed++
+	try {
+		Set-Location -LiteralPath $directory -ErrorAction Stop
+	}
+	catch {
+		$script:ConversionErrors++
+		$script:FailedFiles.Add("PATH ERROR: $directory - $($_.Exception.Message)")
+		Write-Output "Failed to access directory $directory. Error: $_"
+		return
+	}
 
 	# Get the video files
 	$videoFiles = Get-ChildItem -Recurse -Include *.avi, *.flv, *.m2ts, *.mkv, *.mov, *.mp4, *.mpg, *.mts, *.ts, *.wmv
 	$totalFiles = $videoFiles.Count
+	$script:FilesFound += $totalFiles
 	$i = 0
 
 	# Progress bar
@@ -69,7 +89,7 @@ function Process-Videos {
 
 	foreach ($file in $videoFiles) {
 		$i++
-		$progress.PercentComplete = [math]::Round(($i / $totalFiles) * 100)
+		if ($totalFiles -gt 0) { $progress.PercentComplete = [math]::Round(($i / $totalFiles) * 100) }
 		Write-Progress @progress
 
 		$inputFile = $file.FullName
@@ -91,42 +111,50 @@ function Process-Videos {
 		$inputFileSize = (Get-Item -LiteralPath $inputFile).Length
 
 		# Run ffmpeg and capture the exit code
-		$process = Start-Process -NoNewWindow -Wait -FilePath "ffmpeg" -ArgumentList @(
-			"-hwaccel auto",
-			"-i `"$inputFile`"",
-			"-pix_fmt p010le",
-			"-map 0:v",
-			"-map 0:a",
-			"-map_metadata 0",
-			"-c:v hevc_nvenc",
-			"-rc constqp",
-			"-qp $ffmpeg_qv",
-			"-b:v 0K",
-			"-c:a aac",
-			"-b:a 384k",
-			"-movflags +faststart",
-			"-movflags use_metadata_tags",
-			"`"$outputFile`""
-		) -PassThru
+		try {
+			$process = Start-Process -NoNewWindow -Wait -FilePath "ffmpeg" -ArgumentList @(
+				"-hwaccel auto",
+				"-i `"$inputFile`"",
+				"-pix_fmt p010le",
+				"-map 0:v",
+				"-map 0:a",
+				"-map_metadata 0",
+				"-c:v hevc_nvenc",
+				"-rc constqp",
+				"-qp $ffmpeg_qv",
+				"-b:v 0K",
+				"-c:a aac",
+				"-b:a 384k",
+				"-movflags +faststart",
+				"-movflags use_metadata_tags",
+				"`"$outputFile`""
+			) -PassThru -ErrorAction Stop
 
-		# Wait for the process to exit and get the exit code
-		$process.WaitForExit()
-		$exitCode = $process.ExitCode
+			$process.WaitForExit()
+			$exitCode = $process.ExitCode
+		}
+		catch {
+			$exitCode = -1
+			Write-Output "Failed to start/run ffmpeg for $inputFile. Error: $_"
+		}
 
 		if ($exitCode -eq 0 -and (Test-Path -LiteralPath $outputFile)) {
 			# Get the size of the output file
 			$outputFileSize = (Get-Item -LiteralPath $outputFile).Length
 
 			if ($outputFileSize -lt $inputFileSize) {
+				$script:FilesConverted++
 				Write-Output "Compression successful. Deleting source file: $inputFile"
 				try {
-					Remove-Item -LiteralPath $inputFile -Force
+					Remove-Item -LiteralPath $inputFile -Force -ErrorAction Stop
 				}
 				catch {
+					$script:SourceDeleteErrors++
 					Write-Output "Failed to delete source file: $inputFile. Error: $_"
 				}
 			}
 			else {
+				$script:FilesNotSmaller++
 				Write-Output "Output file size is greater than or equal to source file. Deleting output file: $outputFile"
 				try {
 					Remove-Item -LiteralPath $outputFile -Force
@@ -137,6 +165,8 @@ function Process-Videos {
 			}
 		}
 		else {
+			$script:ConversionErrors++
+			$script:FailedFiles.Add("$inputFile (ffmpeg exit code: $exitCode)")
 			Write-Output "Compression failed for $inputFile. Removing incomplete output file: $outputFile"
 			if (Test-Path -LiteralPath $outputFile) {
 				try {
@@ -178,8 +208,36 @@ $ScriptName = $MyInvocation.MyCommand.Name
 $smtpServer = "smtp.gmail.com"
 $smtpFrom = $smtpUser
 $smtpTo = "jacob.w93@gmail.com"
+$scriptEndTime = Get-Date
+$scriptDuration = $scriptEndTime - $scriptStartTime
+$durationText = if ($scriptDuration.TotalHours -ge 1) {
+	"{0:hh\:mm\:ss}" -f $scriptDuration
+} else {
+	"{0:mm\:ss}" -f $scriptDuration
+}
+
+$conversionStatus = if ($script:ConversionErrors -eq 0) { "No conversion errors detected" } else { "$($script:ConversionErrors) conversion/path error(s) detected" }
+$failedFilesText = if ($script:FailedFiles.Count -gt 0) {
+	"`r`nFailed items:`r`n- " + ($script:FailedFiles -join "`r`n- ")
+} else { "" }
+
 $messageSubject = "Script execution is complete - `"$ScriptName`""
-$messageBody = "The `"$ScriptName`" script execution is complete."
+$messageBody = @"
+The `"$ScriptName`" script execution is complete.
+
+Summary:
+- Started:              $($scriptStartTime.ToString('yyyy-MM-dd HH:mm:ss'))
+- Finished:             $($scriptEndTime.ToString('yyyy-MM-dd HH:mm:ss'))
+- Total runtime:        $durationText
+- Paths processed:      $($script:PathsProcessed)
+- Video files found:    $($script:FilesFound)
+- Files converted:      $($script:FilesConverted)
+- Files not kept because output was not smaller: $($script:FilesNotSmaller)
+- Conversion errors:    $($script:ConversionErrors)
+- Source delete errors: $($script:SourceDeleteErrors)
+- Conversion status:    $conversionStatus
+$failedFilesText
+"@
 
 # Define the key (16 bytes for 128-bit key)
 $key = "5243428937038590"  # 16 characters

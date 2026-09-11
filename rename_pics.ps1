@@ -1,4 +1,4 @@
-$Host.UI.RawUI.WindowTitle = "Batch rename images"
+﻿$Host.UI.RawUI.WindowTitle = "Batch rename images"
 $Host.UI.RawUI.ForegroundColor = "White"
 $Host.PrivateData.ProgressBackgroundColor = 'Yellow'
 $Host.PrivateData.ProgressForegroundColor = 'Black'
@@ -13,6 +13,13 @@ $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
 $LowQualityName = 'LQ'
 $ContactSheetsName = 'CS'
 $ExcludedFolderNames = @($LowQualityName, $ContactSheetsName)
+
+# Execution statistics used in the final console/e-mail summary
+$FilesRenamedSuccessfully = 0
+$ProcessingErrorCount = 0
+$ProcessingErrors = [System.Collections.Generic.List[string]]::new()
+$LQImages_counter = 0
+$CSImages_counter = 0
 
 Add-Type -AssemblyName System.Windows.Forms
 Set-ItemProperty $key Hidden 1
@@ -293,15 +300,17 @@ If ( ($MoveLQCS -eq "1") -and (($ParentFolders).Count -ge 1)) {
 			$image.Dispose()
 		}
 		catch {
-			$LogEntry = "Error processing $($File.FullName): $_"
-			$myChangeLog.Add($logEntry) | Out-Null
+			$ProcessingErrorCount++
+			$LogEntry = "Error processing image '$($picture.FullName)': $($_.Exception.Message)"
+			$ProcessingErrors.Add($LogEntry) | Out-Null
+			$myChangeLog.Add($LogEntry) | Out-Null
 		}
 	}
 }
 CleanFilesandFolders
 
-$LQImages_counter = $i
-$CSImages_counter = $k
+$LQImages_counter = if ($null -ne $i) { $i } else { 0 }
+$CSImages_counter = if ($null -ne $k) { $k } else { 0 }
 $myChangeLog | Out-File -Encoding UTF8 -FilePath ($changelog_FullName) -Append;
 
 # Rename Folders
@@ -389,16 +398,25 @@ Foreach ($dir In $Folders) {
 			$old_img_name = $file.fullname.ToString().Trim()
 			# "$split[0] renamed to $new_img_name"
 			$new_img_name = (($new_img_name -Replace $regex_str, ".") -replace '\.+', '.') -Replace '^\.+', "";
-			if (!(Test-Path -LiteralPath ($($file.DirectoryName) + "\" + $new_img_name))) {
-				Rename-Item -LiteralPath "$old_img_name" -NewName "$new_img_name"
+			try {
+				if (!(Test-Path -LiteralPath ($($file.DirectoryName) + "\" + $new_img_name))) {
+					Rename-Item -LiteralPath "$old_img_name" -NewName "$new_img_name" -ErrorAction Stop
+				}
+				else {
+					Rename-Item -LiteralPath "$old_img_name" -NewName "$temporary" -ErrorAction Stop
+					Rename-Item -LiteralPath ($($file.DirectoryName) + "\" + $temporary) -NewName "$new_img_name" -ErrorAction Stop
+				}
+
+				$FilesRenamedSuccessfully++
+				$logEntry = $("$Current_timestamp; Renamed file: '{0}';'{1}'" -f $old_img_name, $new_img_name)
+				$myChangeLog.Add($logEntry) | Out-Null
 			}
-			else {
-				Rename-Item -LiteralPath "$old_img_name" -NewName "$temporary";
-				Rename-Item -LiteralPath ($($file.DirectoryName) + "\" + $temporary) -NewName "$new_img_name";
-				
+			catch {
+				$ProcessingErrorCount++
+				$logEntry = "$Current_timestamp; ERROR renaming file: '$old_img_name'; $($_.Exception.Message)"
+				$ProcessingErrors.Add($logEntry) | Out-Null
+				$myChangeLog.Add($logEntry) | Out-Null
 			}
-			$logEntry = $("$Current_timestamp; Renamed file: '{0}';'{1}'" -f $old_img_name, $new_img_name)
-			$myChangeLog.Add($logEntry) | Out-Null
 			$counter++
 		}
 	}
@@ -423,6 +441,20 @@ clear-host
 Write-Host -ForegroundColor Green "Process time: $processTimeFormatted (hh:mm:ss)"
 "`nProcess time: $processTimeFormatted (hh:mm:ss)" | Out-File -Encoding UTF8 -LiteralPath ($changelog_FullName) -Append;
 
+# Print the same execution summary in the PowerShell console
+Write-Host -ForegroundColor Cyan "`n================ EXECUTION SUMMARY ================"
+Write-Host "Input path(s)              : $InputFolder"
+Write-Host "Files found for processing : $Total_files_count"
+Write-Host "Files converted/renamed    : $FilesRenamedSuccessfully"
+Write-Host "Archives found/extracted   : $Archives_count"
+Write-Host "Low-quality images moved   : $LQImages_counter"
+Write-Host "Contact sheets moved       : $CSImages_counter"
+Write-Host "Processing errors          : $ProcessingErrorCount"
+Write-Host "Start time                 : $($startTime.ToString('yyyy-MM-dd HH:mm:ss'))"
+Write-Host "End time                   : $($endTime.ToString('yyyy-MM-dd HH:mm:ss'))"
+Write-Host "Total runtime              : $processTimeFormatted (hh:mm:ss)"
+Write-Host -ForegroundColor Cyan "===================================================`n"
+
 # SMTP server credentials
 $smtpUser = "pshscript@gmail.com"
 $smtpPass = "5KeHjRKRAjsJESrlm0fKqg=="
@@ -433,7 +465,40 @@ $smtpServer = "smtp.gmail.com"
 $smtpFrom = $smtpUser
 $smtpTo = "jacob.w93@gmail.com"
 $messageSubject = "Script execution is complete - `"$ScriptName`""
-$messageBody = "The `"$ScriptName`" script execution for input folder `"$InputFolder`" is complete. Please find attached changelog if the size is less than 20 MB."
+
+$ErrorStatus = if ($ProcessingErrorCount -eq 0) { "NO - no processing errors detected" } else { "YES - $ProcessingErrorCount error(s) detected" }
+$InputPathsSummary = $InputFolder
+$ErrorDetails = if ($ProcessingErrorCount -gt 0) {
+	($ProcessingErrors | Select-Object -First 10) -join "`r`n"
+} else {
+	"None"
+}
+if ($ProcessingErrorCount -gt 10) {
+	$ErrorDetails += "`r`n... plus $($ProcessingErrorCount - 10) additional error(s). See the attached changelog for details."
+}
+
+$messageBody = @"
+The "$ScriptName" script execution is complete.
+
+================ EXECUTION SUMMARY ================
+Input path(s)              : $InputPathsSummary
+Files found for processing : $Total_files_count
+Files converted/renamed    : $FilesRenamedSuccessfully
+Archives found/extracted   : $Archives_count
+Low-quality images moved   : $LQImages_counter
+Contact sheets moved       : $CSImages_counter
+Processing errors          : $ProcessingErrorCount
+Were there any errors?     : $ErrorStatus
+Start time                 : $($startTime.ToString('yyyy-MM-dd HH:mm:ss'))
+End time                   : $($endTime.ToString('yyyy-MM-dd HH:mm:ss'))
+Total runtime              : $processTimeFormatted (hh:mm:ss)
+===================================================
+
+Error details (up to first 10):
+$ErrorDetails
+
+The changelog is attached when its size is less than 20 MB.
+"@
 
 # Define the key (16 bytes for 128-bit key)
 $key = "5243428937038590"  # 16 characters

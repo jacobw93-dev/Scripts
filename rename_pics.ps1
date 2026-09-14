@@ -56,8 +56,22 @@ $changelog_FullName = "$InputFolder" + '\' + "changelog_" + ((Get-Item -LiteralP
 function RenameMode {
 	$answer = $null
 	while (@("1", "2") -notcontains $answer) {
-		Write-Host -ForegroundColor Green "`nShould I swap file names in first or second level subdirectories? `n1 (First Level), 2 (Second Level)"
-		$answer = Read-Host
+		Write-Host -ForegroundColor Green "`nSelect the level of subdirectories to process:"
+		Write-Host -ForegroundColor DarkGray @"
+
+Example directory structure:
+
+[Selected folder]                     Level 0 (not selectable)
+|-- Event_A                           Level 1  <-- option 1
+|   |-- Set_01                        Level 2  <-- option 2
+|   `-- Set_02                        Level 2  <-- option 2
+`-- Event_B                           Level 1  <-- option 1
+    `-- Set_03                        Level 2  <-- option 2
+
+1 = Process folders directly inside the selected folder (Event_A, Event_B)
+2 = Process their subfolders (Set_01, Set_02, Set_03)
+"@
+		$answer = Read-Host "Enter 1 or 2"
 		$answer = $answer.ToUpper().Trim();
 		Switch ($answer) {
 			"1" { $RenMode = 0 }

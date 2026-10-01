@@ -27,6 +27,142 @@ function Select-ChangelogFile {
     exit
 }
 
+function Select-SourceFolder {
+    param(
+        [string]$InitialDirectory = 'D:\Downloads\Pics\'
+    )
+
+    if (-not (Test-Path -LiteralPath $InitialDirectory -PathType Container)) {
+        $InitialDirectory = 'D:\Downloads\Pics\'
+    }
+
+    $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
+        SelectedPath = $InitialDirectory
+        Description  = 'Select the CURRENT source directory containing the renamed files/directories'
+    }
+
+    if ($FolderBrowser.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+        Write-Host -ForegroundColor Green "`nSelected source directory:"
+        Write-Host $FolderBrowser.SelectedPath
+        return $FolderBrowser.SelectedPath.TrimEnd([char[]]'\/')
+    }
+
+    Write-Host -ForegroundColor Red "`nUser cancelled the operation."
+    exit
+}
+
+function Get-CommonDirectoryPath {
+    param([Parameter(Mandatory)][string[]]$Paths)
+
+    if ($Paths.Count -eq 0) {
+        return $null
+    }
+
+    $parents = foreach ($path in $Paths) {
+        $normalized = $path.TrimEnd([char[]]'\/')
+        [System.IO.Path]::GetDirectoryName($normalized)
+    }
+
+    $common = $parents[0].TrimEnd([char[]]'\/')
+
+    foreach ($parent in $parents | Select-Object -Skip 1) {
+        $candidate = $parent.TrimEnd([char[]]'\/')
+
+        while ($common -and -not (
+            $candidate.Equals($common, [System.StringComparison]::OrdinalIgnoreCase) -or
+            $candidate.StartsWith($common + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase) -or
+            $candidate.StartsWith($common + [System.IO.Path]::AltDirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)
+        )) {
+            $common = [System.IO.Path]::GetDirectoryName($common)
+        }
+    }
+
+    return $common
+}
+
+function Get-OriginalSourceRoot {
+    param(
+        [Parameter(Mandatory)][string]$ChangelogFile,
+        [Parameter(Mandatory)][object[]]$Operations
+    )
+
+    # The original rename script creates the log as:
+    # changelog_<selected-folder-name>_yyyyMMdd_HHmmss.txt
+    # Prefer that folder-name token when locating the old source root in logged paths.
+    $logBaseName = [System.IO.Path]::GetFileName($ChangelogFile)
+    $folderToken = $null
+
+    if ($logBaseName -match '^changelog_(.+)_\d{8}_\d{6}\.txt$') {
+        $folderToken = $Matches[1]
+    }
+
+    if ($folderToken) {
+        $candidateRoots = [System.Collections.Generic.List[string]]::new()
+
+        foreach ($operation in $Operations) {
+            $path = $operation.OldPath.TrimEnd([char[]]'\/')
+            $root = [System.IO.Path]::GetPathRoot($path)
+            $relative = $path.Substring($root.Length)
+            $parts = $relative -split '[\\/]'
+            $current = $root.TrimEnd([char[]]'\/')
+
+            foreach ($part in $parts) {
+                if ([string]::IsNullOrWhiteSpace($part)) { continue }
+
+                if ($current) {
+                    $current = Join-Path -Path $current -ChildPath $part
+                }
+                else {
+                    $current = $root + $part
+                }
+
+                $sanitized = $part -replace '[^0-9A-Za-z\.]+', '_'
+                if ($sanitized -eq $folderToken) {
+                    $candidateRoots.Add($current) | Out-Null
+                }
+            }
+        }
+
+        if ($candidateRoots.Count -gt 0) {
+            return ($candidateRoots |
+                Group-Object { $_.ToLowerInvariant() } |
+                Sort-Object Count -Descending |
+                Select-Object -First 1 |
+                ForEach-Object { $_.Group[0] })
+        }
+    }
+
+    # Fallback: use the common parent of all logged original paths.
+    return Get-CommonDirectoryPath -Paths @($Operations.OldPath)
+}
+
+function Convert-ToCurrentSourcePath {
+    param(
+        [Parameter(Mandatory)][string]$LoggedPath,
+        [Parameter(Mandatory)][string]$OriginalSourceRoot,
+        [Parameter(Mandatory)][string]$CurrentSourceRoot
+    )
+
+    $logged = $LoggedPath.TrimEnd([char[]]'\/')
+    $oldRoot = $OriginalSourceRoot.TrimEnd([char[]]'\/')
+    $newRoot = $CurrentSourceRoot.TrimEnd([char[]]'\/')
+
+    $isAtRoot = $logged.Equals($oldRoot, [System.StringComparison]::OrdinalIgnoreCase)
+    $isBelowRoot = $logged.StartsWith($oldRoot + '\', [System.StringComparison]::OrdinalIgnoreCase) -or
+                   $logged.StartsWith($oldRoot + '/', [System.StringComparison]::OrdinalIgnoreCase)
+
+    if (-not ($isAtRoot -or $isBelowRoot)) {
+        throw "Logged path '$LoggedPath' is outside detected original source root '$OriginalSourceRoot'."
+    }
+
+    $relative = $logged.Substring($oldRoot.Length).TrimStart([char[]]'\/')
+    if ([string]::IsNullOrWhiteSpace($relative)) {
+        return $newRoot
+    }
+
+    return Join-Path -Path $newRoot -ChildPath $relative
+}
+
 function Get-PathDepth {
     param([Parameter(Mandatory)][string]$Path)
 
@@ -141,6 +277,38 @@ if ($RenameOperations.Count -eq 0) {
     exit
 }
 
+$OriginalSourceRoot = Get-OriginalSourceRoot -ChangelogFile $ChangelogFile -Operations $RenameOperations
+if ([string]::IsNullOrWhiteSpace($OriginalSourceRoot)) {
+    Write-Host -ForegroundColor Red "`nUnable to determine the original source directory from the changelog."
+    exit 1
+}
+
+$SuggestedSourceFolder = [System.IO.Path]::GetDirectoryName($ChangelogFile)
+$SourceFolder = Select-SourceFolder -InitialDirectory $SuggestedSourceFolder
+
+# Rebase every logged path from the original source location to the source directory
+# selected above. This allows restoring names after the whole directory tree was moved.
+try {
+    foreach ($operation in $RenameOperations) {
+        $rebasedOldPath = Convert-ToCurrentSourcePath `
+            -LoggedPath $operation.OldPath `
+            -OriginalSourceRoot $OriginalSourceRoot `
+            -CurrentSourceRoot $SourceFolder
+
+        $rebasedParent = [System.IO.Path]::GetDirectoryName($rebasedOldPath.TrimEnd([char[]]'\/'))
+        if ([string]::IsNullOrWhiteSpace($rebasedParent)) {
+            throw "Unable to determine parent path for '$rebasedOldPath'."
+        }
+
+        $operation.OldPath = $rebasedOldPath
+        $operation.CurrentPath = Join-Path -Path $rebasedParent -ChildPath $operation.NewName
+    }
+}
+catch {
+    Write-Host -ForegroundColor Red "`nUnable to map changelog paths to selected source directory: $($_.Exception.Message)"
+    exit 1
+}
+
 $FileOperations = @(
     $RenameOperations |
         Where-Object Type -eq 'file' |
@@ -154,8 +322,10 @@ $DirectoryOperations = @(
 )
 
 Write-Host -ForegroundColor Cyan "`n================ RESTORE PLAN ================"
-Write-Host "Changelog              : $ChangelogFile"
-Write-Host "File rename entries    : $($FileOperations.Count)"
+Write-Host "Changelog               : $ChangelogFile"
+Write-Host "Original source root    : $OriginalSourceRoot"
+Write-Host "Current source directory: $SourceFolder"
+Write-Host "File rename entries     : $($FileOperations.Count)"
 Write-Host "Directory rename entries: $($DirectoryOperations.Count)"
 Write-Host "Total rename entries   : $($RenameOperations.Count)"
 Write-Host -ForegroundColor Cyan "==============================================`n"
